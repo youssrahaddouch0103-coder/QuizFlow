@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Java / Maven
+backend/target/
+*.class
+
+# Node
+node_modules/
+frontend/dist/
+
+# Python
+__pycache__/
+.venv/
+.pytest_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

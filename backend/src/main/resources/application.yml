@@ -1,0 +1,52 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: quizflow-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/quizflow}
+    username: ${DB_USER:quizflow}
+    password: ${DB_PASSWORD:quizflow}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none   # le schéma est géré par Flyway (src/main/resources/db/migration)
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/quizflow}
+      auto-index-creation: true
+  jackson:
+    default-property-inclusion: non_null
+
+app:
+  jwt:
+    # Au moins 32 caractères. À changer en production (variable JWT_SECRET).
+    secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me-0123456789}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:24}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  # URL publique utilisée dans le QR code (ex : http://192.168.1.20:3000). Vide = URL du navigateur.
+  public-url: ${PUBLIC_URL:}
+  session:
+    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:120}
+    timeout-check-ms: ${SESSION_TIMEOUT_CHECK_MS:300000}
+  ai:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:90}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
