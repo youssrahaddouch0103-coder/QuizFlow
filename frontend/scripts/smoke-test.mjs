@@ -116,7 +116,7 @@ async function main() {
   )
   const again = await call('POST', `/api/public/sessions/${code}/answers`, { player: players[0].token, body: { questionId: q1.id, choiceIds: [goodQ1] } })
   ok(again.status === 409 && again.data.code === 'ALREADY_ANSWERED', 'deuxième réponse refusée (R4)')
-  await wait(300)
+  await wait(800)
   const stats = teacherWs.events.filter((e) => e.type === 'ANSWER_STATS').at(-1)
   ok(stats && stats.payload.answerCount === STUDENTS, 'statistiques en direct reçues par l’enseignant')
 

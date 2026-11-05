@@ -1,12 +1,15 @@
 package ma.ensam.quizflow;
 
-import ma.ensam.quizflow.config.AppProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+import ma.ensam.quizflow.config.AppProperties;
+
+// L'authentification passe par notre JWT : on désactive l'utilisateur par défaut de Spring Security.
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableScheduling
 @EnableConfigurationProperties(AppProperties.class)
 public class QuizflowApplication {

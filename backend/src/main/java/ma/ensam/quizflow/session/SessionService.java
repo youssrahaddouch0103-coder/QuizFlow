@@ -1,5 +1,17 @@
 package ma.ensam.quizflow.session;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import ma.ensam.quizflow.activity.Activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityRepository;
@@ -10,12 +22,15 @@ import ma.ensam.quizflow.realtime.LiveEvent;
 import ma.ensam.quizflow.realtime.LiveEvent.EventType;
 import ma.ensam.quizflow.session.LiveSessionRegistry.ActivitySnapshot;
 import ma.ensam.quizflow.session.SessionDtos.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import ma.ensam.quizflow.session.SessionDtos.ChoiceResult;
+import ma.ensam.quizflow.session.SessionDtos.ClosedInfo;
+import ma.ensam.quizflow.session.SessionDtos.LeaderboardEntry;
+import ma.ensam.quizflow.session.SessionDtos.LiveStats;
+import ma.ensam.quizflow.session.SessionDtos.QuestionLive;
+import ma.ensam.quizflow.session.SessionDtos.QuestionResult;
+import ma.ensam.quizflow.session.SessionDtos.ResultsView;
+import ma.ensam.quizflow.session.SessionDtos.SessionSummary;
+import ma.ensam.quizflow.session.SessionDtos.TeacherSessionView;
 
 /**
  * Cycle de vie d'une session (P1 W3, P2 §5) piloté par l'enseignant.
@@ -200,7 +215,17 @@ public class SessionService {
         }
         return distribution;
     }
-
+    /** Relit les statistiques de la question en cours (données validées) et les envoie à l'enseignant. */
+    @Transactional(readOnly = true)
+    public void publishLiveStats(UUID sessionId) {
+        sessions.findById(sessionId)
+                .filter(s -> s.getState() == SessionState.QUESTION_OUVERTE || s.getState() == SessionState.QUESTION_FERMEE)
+                .ifPresent(session -> {
+                    Activity.Question question = registry.get(session).questionAt(session.getCurrentQuestionIndex());
+                    events.publishToTeacher(session.getCode(),
+                            LiveEvent.of(EventType.ANSWER_STATS, liveStats(session, question)));
+                });
+    }
     public LiveStats liveStats(Session session, Activity.Question question) {
         return new LiveStats(question.getId(),
                 answers.countBySessionIdAndQuestionId(session.getId(), question.getId()),

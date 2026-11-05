@@ -44,9 +44,12 @@ export default function LiveSessionPage() {
       switch (event.type) {
         case 'PARTICIPANT_JOINED': {
           const p = event.payload as ParticipantJoinedPayload
-          setView((v) =>
-            v ? { ...v, participantCount: p.participantCount, participants: v.participants.includes(p.pseudo) ? v.participants : [...v.participants, p.pseudo] } : v,
-          )
+          setView((v) => {
+            if (!v) return v
+            const participants = v.participants.includes(p.pseudo) ? v.participants : [...v.participants, p.pseudo]
+            // Plusieurs arrivées simultanées : on garde le plus grand des deux comptages.
+            return { ...v, participants, participantCount: Math.max(p.participantCount, participants.length) }
+          })
           break
         }
         case 'ANSWER_STATS': {

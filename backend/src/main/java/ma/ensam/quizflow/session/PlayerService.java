@@ -1,5 +1,16 @@
 package ma.ensam.quizflow.session;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import ma.ensam.quizflow.activity.Activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
@@ -8,12 +19,14 @@ import ma.ensam.quizflow.realtime.EventPublisher;
 import ma.ensam.quizflow.realtime.LiveEvent;
 import ma.ensam.quizflow.realtime.LiveEvent.EventType;
 import ma.ensam.quizflow.session.SessionDtos.*;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
+import ma.ensam.quizflow.session.SessionDtos.AnswerRequest;
+import ma.ensam.quizflow.session.SessionDtos.ClosedInfo;
+import ma.ensam.quizflow.session.SessionDtos.JoinResponse;
+import ma.ensam.quizflow.session.SessionDtos.MyResult;
+import ma.ensam.quizflow.session.SessionDtos.ParticipantJoined;
+import ma.ensam.quizflow.session.SessionDtos.PlayerState;
+import ma.ensam.quizflow.session.SessionDtos.PublicSessionInfo;
+import ma.ensam.quizflow.session.SessionDtos.QuestionLive;
 
 /**
  * Côté étudiant (anonyme) : rejoindre une session (W4) et répondre (W5).
@@ -30,10 +43,11 @@ public class PlayerService {
     private final ScoringService scoring;
     private final SessionService sessionService;
     private final EventPublisher events;
-
+    private final LiveStatsBroadcaster statsBroadcaster;
     public PlayerService(SessionRepository sessions, ParticipantRepository participants, AnswerRepository answers,
                          ParticipantResultRepository results, LiveSessionRegistry registry, ScoringService scoring,
-                         SessionService sessionService, EventPublisher events) {
+                         SessionService sessionService, EventPublisher events,
+                         LiveStatsBroadcaster statsBroadcaster) {
         this.sessions = sessions;
         this.participants = participants;
         this.answers = answers;
@@ -42,6 +56,7 @@ public class PlayerService {
         this.scoring = scoring;
         this.sessionService = sessionService;
         this.events = events;
+        this.statsBroadcaster = statsBroadcaster;
     }
 
     @Transactional(readOnly = true)
@@ -140,8 +155,7 @@ public class PlayerService {
         } catch (DataIntegrityViolationException e) {
             throw ApiException.conflict("ALREADY_ANSWERED", "Vous avez déjà répondu à cette question");
         }
-        events.publishToTeacher(session.getCode(),
-                LiveEvent.of(EventType.ANSWER_STATS, sessionService.liveStats(session, question)));
+                statsBroadcaster.requestAfterCommit(session.getId());
     }
 
     private Participant authenticate(String token) {
