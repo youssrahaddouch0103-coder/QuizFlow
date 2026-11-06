@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { Logo, PageLoader } from './ui'
+import './TeacherLayout.css'
 
 /** Gabarit des pages enseignant : vérifie la connexion et affiche la barre de navigation. */
 export default function TeacherLayout() {
@@ -10,12 +11,12 @@ export default function TeacherLayout() {
 
   return (
     <>
-      <header className="app-header">
+      <header className="app-header teacher-header">
         <div className="app-header-inner">
           <NavLink to="/dashboard" className="brand">
             <Logo /> QuizFlow
           </NavLink>
-          <nav className="nav">
+          <nav className="nav" aria-label="Navigation de l’espace animateur">
             <NavLink to="/dashboard">Activités</NavLink>
             <NavLink to="/history">Historique</NavLink>
           </nav>
