@@ -3,6 +3,7 @@ import { api } from '../../api/api'
 import { errorMessage } from '../../api/client'
 import type { ActivityType, AiGeneratedQuestion } from '../../api/types'
 import { ErrorAlert, Spinner } from '../../components/ui'
+import ActivitySymbol from '../../components/ActivitySymbol'
 
 /**
  * W7 — l'IA propose, l'enseignant décide : les questions générées s'affichent ici,
@@ -41,13 +42,16 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
   return (
     <div className="card ai-panel stack">
       <div className="row">
-        <span style={{ fontSize: '1.3rem' }}>✨</span>
-        <h3>Générer avec l’IA</h3>
+        <ActivitySymbol kind="empty" className="editor-ai-symbol" />
+        <div><span className="editor-eyebrow">Un coup de pouce</span><h3>Créer à partir d’un texte</h3></div>
       </div>
-      <p className="muted small">Collez la partie du cours que vous venez d’expliquer : l’IA propose des questions basées uniquement sur ce texte.</p>
-      <textarea className="textarea" style={{ minHeight: 130 }} maxLength={20000} placeholder="Extrait de cours (50 caractères minimum)…" value={text} onChange={(e) => setText(e.target.value)} />
+      <p className="muted small">L’IA vous propose des questions à partir de votre contenu. Vous choisissez celles à ajouter.</p>
+      <label className="field">Votre texte
+      <textarea className="textarea" style={{ minHeight: 130 }} maxLength={20000} placeholder="Collez un extrait de cours, de formation ou de présentation…" value={text} onChange={(e) => setText(e.target.value)} />
+      </label>
+      <p className="muted small">{tooShort ? `${text.trim().length} / 50 caractères minimum` : `${text.trim().length} caractères · prêt à générer`}</p>
       <div className="row">
-        <select className="select" style={{ width: 'auto' }} value={count} onChange={(e) => setCount(Number(e.target.value))}>
+        <select aria-label="Nombre de questions à générer" className="select" style={{ width: 'auto' }} value={count} onChange={(e) => setCount(Number(e.target.value))}>
           {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
             <option key={n} value={n}>
               {n} question{n > 1 ? 's' : ''}
@@ -55,7 +59,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
           ))}
         </select>
         {type === 'QUIZ' && (
-          <select className="select" style={{ width: 'auto' }} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+          <select aria-label="Difficulté des questions" className="select" style={{ width: 'auto' }} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
             <option value="facile">Facile</option>
             <option value="moyen">Moyen</option>
             <option value="difficile">Difficile</option>
@@ -92,7 +96,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
                   </li>
                 ))}
               </ul>
-              {q.explanation && <p className="muted">💡 {q.explanation}</p>}
+              {q.explanation && <p className="muted">Explication — {q.explanation}</p>}
               <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => accept([q])}>
                 Ajouter
               </button>

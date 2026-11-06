@@ -6,6 +6,11 @@ import type { Activity, ActivityType, AiGeneratedQuestion, ChoiceMode, Question 
 import { ChoiceLetter, ErrorAlert, PageLoader, StatusBadge } from '../../components/ui'
 import { typeLabel } from '../../lib/format'
 import AiPanel from './AiPanel'
+import ActivitySymbol from '../../components/ActivitySymbol'
+import './ActivityEditorPage.css'
+import './ActivityEditorPolish.css'
+import QuestionNavigator from './QuestionNavigator'
+import './ActivityEditorStudio.css'
 
 const MAX_CHOICES = 6
 const MIN_CHOICES = 2
@@ -50,6 +55,14 @@ export default function ActivityEditorPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
+  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
+  const activeQuestion = questions.find(q => q.uid === selectedQuestion)?.uid ?? questions[0]?.uid
+  const addQuestion = () => {
+    const question = emptyQuestion()
+    setQuestions(qs => [...qs, question])
+    setSelectedQuestion(question.uid)
+    setDirty(true)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -168,22 +181,23 @@ export default function ActivityEditorPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div className="stack" style={{ gap: 20 }}>
-      <div className="page-head">
+    <div className="stack activity-editor" style={{ gap: 20 }}>
+      <div className="page-head editor-heading">
         <div className="stack" style={{ gap: 6 }}>
           <Link to="/dashboard" className="small">
             ← Mes activités
           </Link>
           <div className="row">
-            <h1>{isNew ? `Nouveau ${typeLabel[type].toLowerCase()}` : 'Modifier l’activité'}</h1>
+            <h1>{isNew ? `Créer un ${typeLabel[type].toLowerCase()}` : 'Modifier l’activité'}</h1>
             {saved && <StatusBadge status={saved.status} />}
             {dirty && <span className="badge badge-warning">Modifications non enregistrées</span>}
           </div>
+          <p className="muted small">Préparez vos questions à votre rythme, puis partagez votre activité.</p>
         </div>
-        <div className="row">
+        <div className="row editor-save-actions">
           {saved?.status === 'PRETE' && !dirty && (
             <button className="btn btn-outline" onClick={launch} disabled={busy}>
-              ▶ Lancer en classe
+              Lancer une session
             </button>
           )}
           {!readOnly && (
@@ -213,26 +227,40 @@ export default function ActivityEditorPage() {
         </div>
       )}
 
+      {!readOnly && (
+        <details className="editor-ai-disclosure">
+          <summary>Créer à partir d’un texte <span>Aide IA</span></summary>
+          <AiPanel type={type} onAdd={addGenerated} />
+        </details>
+      )}
+
       <div className="editor-layout">
+        <QuestionNavigator questions={questions} selected={activeQuestion} onSelect={setSelectedQuestion} onAdd={addQuestion} readOnly={readOnly} />
         <fieldset disabled={readOnly} className="stack" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          <div className="card stack">
+          <details className="card editor-activity-settings">
+            <summary>{title.trim() || 'Nommer votre activité'} <span>Informations de l’activité</span></summary>
+          <div className="stack editor-intro">
+            <div className="editor-section-heading">
+              <ActivitySymbol kind={quiz ? 'quiz' : 'poll'} />
+              <div><h2>Informations de l’activité</h2><p className="muted small">Titre et description présentés aux participants.</p></div>
+            </div>
             {isNew && (
               <div className="tabs" style={{ alignSelf: 'flex-start' }}>
                 {(['QUIZ', 'SONDAGE'] as ActivityType[]).map((t) => (
-                  <button key={t} type="button" className={type === t ? 'active' : ''} onClick={() => setType(t)}>
+                  <button key={t} type="button" aria-pressed={type === t} className={type === t ? 'active' : ''} onClick={() => setType(t)}>
                     {typeLabel[t]}
                   </button>
                 ))}
               </div>
             )}
             <div className="field">
-              <label htmlFor="title">Titre</label>
+              <label htmlFor="title">Titre de l’activité</label>
               <input
                 id="title"
                 className="input"
                 maxLength={200}
                 value={title}
-                placeholder={quiz ? 'Ex. Les design patterns structurels' : 'Ex. Votre ressenti sur le chapitre 3'}
+                placeholder={quiz ? 'Ex. Testez vos connaissances sur le climat' : 'Ex. Votre avis sur notre atelier'}
                 onChange={(e) => {
                   setTitle(e.target.value)
                   setDirty(true)
@@ -253,13 +281,15 @@ export default function ActivityEditorPage() {
               />
             </div>
           </div>
+          </details>
 
+          <div className="editor-questions-heading"><h2>Vos questions <span>{questions.length}</span></h2><p className="muted small">{quiz ? 'Ajoutez les choix et indiquez les bonnes réponses.' : 'Ajoutez les choix proposés aux participants.'}</p></div>
           {questions.map((q, qi) => (
-            <div key={q.uid} className="card question-card">
+            <div key={q.uid} className="card question-card" hidden={q.uid !== activeQuestion}>
               <div className="question-head">
                 <span className="question-number">Question {qi + 1}</span>
                 <span className="spacer" />
-                <select className="select" style={{ width: 'auto' }} value={q.choiceMode} onChange={(e) => setMode(q, e.target.value as ChoiceMode)}>
+                <select aria-label={`Type de réponse pour la question ${qi + 1}`} className="select" style={{ width: 'auto' }} value={q.choiceMode} onChange={(e) => setMode(q, e.target.value as ChoiceMode)}>
                   <option value="UNIQUE">Choix unique</option>
                   <option value="MULTIPLE">Choix multiple</option>
                 </select>
@@ -274,7 +304,9 @@ export default function ActivityEditorPage() {
                 </button>
               </div>
               <div className="stack">
+                <label className="editor-field-label" htmlFor={`question-${q.uid}`}>Votre question</label>
                 <textarea
+                  id={`question-${q.uid}`}
                   className="textarea"
                   style={{ minHeight: 60 }}
                   maxLength={500}
@@ -283,9 +315,10 @@ export default function ActivityEditorPage() {
                   onChange={(e) => patchQuestion(q.uid, { text: e.target.value })}
                 />
                 {q.choices.map((c, ci) => (
-                  <div key={c.uid} className="choice-row">
+                  <div key={c.uid} className={`choice-row ${quiz && c.correct ? 'editor-choice-correct' : ''}`}>
                     <ChoiceLetter index={ci} />
                     <input
+                      aria-label={`Choix ${ci + 1} de la question ${qi + 1}`}
                       className="input"
                       maxLength={200}
                       placeholder={`Choix ${ci + 1}`}
@@ -323,19 +356,11 @@ export default function ActivityEditorPage() {
             </div>
           ))}
 
-          <button type="button" className="btn btn-outline btn-lg" onClick={() => update((qs) => [...qs, emptyQuestion()])}>
+          <button type="button" className="btn btn-outline btn-lg editor-add-question" onClick={addQuestion}>
             + Ajouter une question
           </button>
         </fieldset>
 
-        <div className="sticky-panel stack">
-          {!readOnly && <AiPanel type={type} onAdd={addGenerated} />}
-          <div className="card stack small">
-            <h3>Règles pour lancer l’activité</h3>
-            <p className="muted">Un titre, au moins une question, 2 à 6 choix par question{quiz ? ', et au moins une bonne réponse (une seule en choix unique).' : '.'}</p>
-            <p className="muted">Vous pouvez enregistrer un brouillon incomplet à tout moment.</p>
-          </div>
-        </div>
       </div>
     </div>
   )

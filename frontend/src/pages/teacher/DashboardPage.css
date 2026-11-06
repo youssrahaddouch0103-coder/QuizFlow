@@ -1,0 +1,245 @@
+.dashboard-page {
+  gap: 20px;
+}
+
+.dashboard-page > [aria-live]:empty,
+.dashboard-page > [role='status']:empty {
+  margin-top: -20px;
+}
+
+.dashboard-page .dashboard-heading {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 0;
+  padding: clamp(18px, 4vw, 34px);
+  color: #fff;
+  background: linear-gradient(120deg, #302765, #5140b5);
+}
+
+.dashboard-heading h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(1.65rem, 3.5vw, 2.15rem);
+}
+
+.dashboard-greeting {
+  color: #dedaff;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-page .dashboard-sessions {
+  border-color: #c9c2ff;
+  background: var(--primary-soft);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-page .dashboard-filters {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.dashboard-page .dashboard-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+}
+
+.dashboard-card {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-card h2 {
+  font-size: 1.1rem;
+}
+
+.dashboard-card-note {
+  color: #805000;
+}
+
+.dashboard-card .badge-warning {
+  color: #805000;
+}
+
+.dashboard-card .badge-success {
+  color: #17633a;
+}
+
+.dashboard-page .dashboard-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.dashboard-empty h2 {
+  color: var(--text);
+}
+
+.dashboard-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  color: #5140b5;
+  background: #f4f1fc;
+  border-radius: 28px;
+}
+
+.dashboard-empty-icon svg {
+  width: 72px;
+  height: 72px;
+}
+
+.dashboard-load-error .btn {
+  align-self: flex-start;
+}
+
+.dashboard-notice {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: #17633a;
+  background: var(--success-soft);
+}
+
+.dashboard-page :is(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.dashboard-create {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-create-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: #fff;
+  color: #25213e;
+  text-decoration: none;
+}
+
+.dashboard-create-link:hover {
+  border-color: #c9c2ff;
+  background: #f5f3ff;
+}
+
+.dashboard-create-link strong,
+.dashboard-create-link small {
+  display: block;
+}
+
+.dashboard-create-link small {
+  margin-top: 4px;
+  color: #59566c;
+}
+
+.dashboard-create-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 68px;
+  height: 68px;
+  border-radius: 20px;
+  color: #5140b5;
+  background: #eeebff;
+}
+
+.dashboard-create-icon--poll {
+  --symbol-accent: #b5dfd0;
+  color: #17634f;
+  background: #e2f4ee;
+}
+
+.dashboard-create-icon svg {
+  width: 60px;
+  height: 60px;
+}
+
+.dashboard-create-arrow {
+  margin-left: auto;
+  font-size: 1.5rem;
+}
+
+.dashboard-toolbar-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 16px;
+}
+
+.dashboard-toolbar-fields label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.dashboard-toolbar-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.dashboard-filter-count {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(100, 90, 150, .1);
+  font-size: .75rem;
+}
+
+.dashboard-card-more[open] {
+  flex-basis: 100%;
+}
+
+.dashboard-card-more summary {
+  list-style: none;
+  width: fit-content;
+}
+
+.dashboard-card-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-card-more summary::after {
+  content: '+';
+  margin-left: 6px;
+}
+
+.dashboard-card-more[open] summary::after {
+  content: '−';
+}
+
+.dashboard-card-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-create {
+    width: 100%;
+  }
+
+  .dashboard-create,
+  .dashboard-toolbar-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-create-link {
+    padding: 16px;
+  }
+
+  .dashboard-page :is(.btn, .tabs button) {
+    min-height: 44px;
+  }
+}

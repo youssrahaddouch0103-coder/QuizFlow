@@ -1,0 +1,32 @@
+.teacher-header .user-menu {
+  min-width: 0;
+}
+
+.teacher-header .user-menu span {
+  overflow-wrap: anywhere;
+}
+
+.teacher-header :is(a, button):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 860px) {
+  .teacher-header .app-header-inner {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding-inline: 14px;
+  }
+
+  .teacher-header .nav {
+    display: flex;
+    flex: 1 0 auto;
+    flex-wrap: wrap;
+  }
+
+  .teacher-header :is(.nav a, .user-menu button) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
