@@ -5,6 +5,7 @@ import ma.ensam.quizflow.auth.AuthDtos.AuthResponse;
 import ma.ensam.quizflow.auth.AuthDtos.LoginRequest;
 import ma.ensam.quizflow.auth.AuthDtos.RegisterRequest;
 import ma.ensam.quizflow.auth.AuthDtos.TeacherView;
+import ma.ensam.quizflow.auth.EmailVerificationDtos.PendingRegistrationResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +21,8 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest req) {
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public PendingRegistrationResponse register(@Valid @RequestBody RegisterRequest req) {
         return authService.register(req);
     }
 
