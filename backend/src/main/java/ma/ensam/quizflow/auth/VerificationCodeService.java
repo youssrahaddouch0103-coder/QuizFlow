@@ -1,6 +1,9 @@
 package ma.ensam.quizflow.auth;
 
 import ma.ensam.quizflow.config.EmailVerificationProperties;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -20,6 +23,24 @@ public class VerificationCodeService {
     private final SecureRandom random = new SecureRandom();
 
     public VerificationCodeService(EmailVerificationProperties properties) {
+        this(properties, "smtp");
+    }
+
+    /**
+     * En mode développement (app.mail.mode=log) sans clé configurée, une clé aléatoire est créée au démarrage :
+     * les codes en attente deviennent invalides après un redémarrage, ce qui est acceptable en développement.
+     */
+    @Autowired
+    public VerificationCodeService(EmailVerificationProperties properties,
+                                   @Value("${app.mail.mode:smtp}") String mailMode) {
+        if ("log".equals(mailMode) && (properties.hmacKey() == null || properties.hmacKey().isBlank())) {
+            byte[] generated = new byte[32];
+            new SecureRandom().nextBytes(generated);
+            key = new SecretKeySpec(generated, "HmacSHA256");
+            LoggerFactory.getLogger(VerificationCodeService.class)
+                    .warn("MODE DEV : clé HMAC temporaire générée (définir APP_EMAILVERIFICATION_HMACKEY en production)");
+            return;
+        }
         byte[] bytes;
         try {
             bytes = Base64.getDecoder().decode(properties.hmacKey() == null ? "" : properties.hmacKey());

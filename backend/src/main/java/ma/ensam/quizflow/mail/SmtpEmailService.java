@@ -2,6 +2,7 @@ package ma.ensam.quizflow.mail;
 
 import ma.ensam.quizflow.common.ApiException;
 import ma.ensam.quizflow.config.EmailVerificationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
@@ -9,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(prefix = "app.mail", name = "mode", havingValue = "smtp", matchIfMissing = true)
 public class SmtpEmailService implements EmailService {
     private final JavaMailSender sender;
     private final EmailVerificationProperties properties;

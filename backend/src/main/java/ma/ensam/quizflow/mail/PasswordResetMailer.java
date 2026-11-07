@@ -2,6 +2,9 @@ package ma.ensam.quizflow.mail;
 
 import ma.ensam.quizflow.config.EmailVerificationProperties;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -9,12 +12,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PasswordResetMailer {
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetMailer.class);
+
+    /** Absent en mode développement (app.mail.mode=log) : les messages vont alors dans les logs. */
     private final JavaMailSender sender;
     private final EmailVerificationProperties properties;
     private final ThreadPoolTaskExecutor executor;
 
-    public PasswordResetMailer(JavaMailSender sender, EmailVerificationProperties properties) {
-        this.sender = sender;
+    public PasswordResetMailer(ObjectProvider<JavaMailSender> sender, EmailVerificationProperties properties) {
+        this.sender = sender.getIfAvailable();
         this.properties = properties;
         this.executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
@@ -47,6 +53,10 @@ public class PasswordResetMailer {
     }
 
     private void send(String recipient, String subject, String text) {
+        if (sender == null) {
+            log.warn("[MODE DEV] Email pour {} — {} :\n{}", recipient, subject, text);
+            return;
+        }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(properties.from());
         message.setTo(recipient);

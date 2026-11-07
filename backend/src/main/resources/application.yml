@@ -26,6 +26,9 @@ spring:
     default-property-inclusion: non_null
 
 app:
+  mail:
+    # smtp : envoi réel des emails (production). log : codes écrits dans les logs (développement, démo).
+    mode: ${APP_MAIL_MODE:smtp}
   jwt:
     # Au moins 32 caractères. À changer en production (variable JWT_SECRET).
     secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me-0123456789}
