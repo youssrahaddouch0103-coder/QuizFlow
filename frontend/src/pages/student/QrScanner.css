@@ -1,0 +1,42 @@
+.qr-scanner__view {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--primary);
+}
+
+.qr-scanner__view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* cadre de visée aux coins pistache */
+.qr-scanner__frame {
+  position: absolute;
+  inset: 18%;
+  border-radius: 14px;
+  --c: var(--accent);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 28px 4px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 4px 28px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 28px 4px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 4px 28px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 28px 4px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 4px 28px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 28px 4px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 4px 28px no-repeat;
+  box-shadow: 0 0 0 999px #1b2a4a66;
+}
+
+.qr-scanner__hint {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #1b2a4ad9;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}

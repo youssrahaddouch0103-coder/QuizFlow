@@ -41,8 +41,9 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/start")
-    public TeacherSessionView start(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id) {
-        return service.start(teacher.id(), id);
+    public TeacherSessionView start(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id,
+                                    @Valid @RequestBody(required = false) TimerRequest timer) {
+        return service.start(teacher.id(), id, timer == null ? null : timer.durationSeconds());
     }
 
     @PostMapping("/{id}/questions/close")
@@ -51,8 +52,9 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/questions/next")
-    public TeacherSessionView next(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id) {
-        return service.next(teacher.id(), id);
+    public TeacherSessionView next(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id,
+                                   @Valid @RequestBody(required = false) TimerRequest timer) {
+        return service.next(teacher.id(), id, timer == null ? null : timer.durationSeconds());
     }
 
     @PostMapping("/{id}/end")

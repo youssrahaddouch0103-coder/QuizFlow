@@ -47,13 +47,15 @@ export function setUnauthorizedHandler(handler: () => void) {
 
 export async function request<T>(path: string, { method = 'GET', body, headers = {}, auth = true }: Options = {}): Promise<T> {
   const finalHeaders: Record<string, string> = { Accept: 'application/json', ...headers }
-  if (body !== undefined) finalHeaders['Content-Type'] = 'application/json'
+  // FormData (envoi de fichier) : le navigateur fixe lui-même le Content-Type multipart.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !isForm) finalHeaders['Content-Type'] = 'application/json'
   const token = auth ? tokenStore.get() : null
   if (token) finalHeaders.Authorization = `Bearer ${token}`
 
   let res: Response
   try {
-    res = await fetch(path, { method, headers: finalHeaders, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(path, { method, headers: finalHeaders, body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body) })
   } catch {
     throw new ApiError(0, 'NETWORK', 'Serveur injoignable. Vérifiez votre connexion.')
   }

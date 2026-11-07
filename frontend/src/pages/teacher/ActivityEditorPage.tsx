@@ -56,6 +56,8 @@ export default function ActivityEditorPage() {
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
+  // Passe à true après un enregistrement sans titre : le champ est alors signalé en rouge.
+  const [titleWarning, setTitleWarning] = useState(false)
   const activeQuestion = questions.find(q => q.uid === selectedQuestion)?.uid ?? questions[0]?.uid
   const addQuestion = () => {
     const question = emptyQuestion()
@@ -72,6 +74,7 @@ export default function ActivityEditorPage() {
         setSaved(a)
         setType(a.type)
         setTitle(a.title ?? '')
+        setTitleWarning(!(a.title ?? '').trim())
         setDescription(a.description ?? '')
         setQuestions(a.questions.map(toDraft))
       })
@@ -159,6 +162,15 @@ export default function ActivityEditorPage() {
       setQuestions(result.questions.map(toDraft))
       setDirty(false)
       if (isNew) navigate(`/activities/${result.id}/edit`, { replace: true })
+      if (!title.trim()) {
+        // Enregistré en brouillon, mais on montre tout de suite ce qui manque.
+        setTitleWarning(true)
+        window.setTimeout(() => {
+          const field = document.getElementById('title')
+          field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          field?.focus()
+        }, 100)
+      }
     } catch (e) {
       setError(errorMessage(e))
     } finally {
@@ -178,6 +190,35 @@ export default function ActivityEditorPage() {
     }
   }
 
+  const canLaunch = saved?.status === 'PRETE' && !dirty
+  const launchHint = !saved
+    ? null
+    : dirty
+      ? 'Enregistrez vos modifications pour pouvoir lancer la session.'
+      : saved.status === 'BROUILLON'
+        ? 'Complétez l’activité (voir ci-dessous) puis enregistrez pour pouvoir la lancer.'
+        : null
+
+  /** Amène l'enseignant au champ concerné par une erreur de validation. */
+  const goToError = (message: string) => {
+    const match = message.match(/^Question (\d+)/)
+    if (match) {
+      const q = questions[Number(match[1]) - 1]
+      if (q) {
+        setSelectedQuestion(q.uid)
+        window.setTimeout(() => {
+          const el = document.getElementById(`question-${q.uid}`)
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el?.focus()
+        }, 50)
+      }
+      return
+    }
+    const field = /titre/i.test(message) ? document.getElementById('title') : null
+    field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    field?.focus()
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -194,17 +235,20 @@ export default function ActivityEditorPage() {
           </div>
           <p className="muted small">Préparez vos questions à votre rythme, puis partagez votre activité.</p>
         </div>
-        <div className="row editor-save-actions">
-          {saved?.status === 'PRETE' && !dirty && (
-            <button className="btn btn-outline" onClick={launch} disabled={busy}>
-              Lancer une session
-            </button>
-          )}
-          {!readOnly && (
-            <button className="btn btn-primary" onClick={save} disabled={busy}>
-              {busy ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
-          )}
+        <div className="editor-save-actions">
+          <div className="row">
+            {!readOnly && (
+              <button className="btn btn-outline" onClick={save} disabled={busy}>
+                {busy ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            )}
+            {saved && saved.status !== 'ARCHIVEE' && (
+              <button className="btn btn-primary" onClick={launch} disabled={busy || !canLaunch}>
+                Lancer une session →
+              </button>
+            )}
+          </div>
+          {saved && saved.status !== 'ARCHIVEE' && launchHint && <p className="editor-launch-hint">{launchHint}</p>}
         </div>
       </div>
 
@@ -218,27 +262,27 @@ export default function ActivityEditorPage() {
       )}
       {saved && saved.errors.length > 0 && !readOnly && (
         <div className="alert alert-warning">
-          Enregistrée en brouillon. Pour pouvoir la lancer :
+          Enregistrée en brouillon. Pour pouvoir la lancer, il reste à compléter (cliquez pour y aller) :
           <ul>
             {saved.errors.map((e) => (
-              <li key={e}>{e}</li>
+              <li key={e}>
+                <button type="button" className="editor-error-link" onClick={() => goToError(e)}>
+                  {e}
+                </button>
+              </li>
             ))}
           </ul>
         </div>
       )}
 
       {!readOnly && (
-        <details className="editor-ai-disclosure">
-          <summary>Créer à partir d’un texte <span>Aide IA</span></summary>
-          <AiPanel type={type} onAdd={addGenerated} />
-        </details>
+        <AiPanel type={type} onAdd={addGenerated} />
       )}
 
       <div className="editor-layout">
         <QuestionNavigator questions={questions} selected={activeQuestion} onSelect={setSelectedQuestion} onAdd={addQuestion} readOnly={readOnly} />
         <fieldset disabled={readOnly} className="stack" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          <details className="card editor-activity-settings">
-            <summary>{title.trim() || 'Nommer votre activité'} <span>Informations de l’activité</span></summary>
+          <section className="card editor-activity-settings">
           <div className="stack editor-intro">
             <div className="editor-section-heading">
               <ActivitySymbol kind={quiz ? 'quiz' : 'poll'} />
@@ -257,15 +301,22 @@ export default function ActivityEditorPage() {
               <label htmlFor="title">Titre de l’activité</label>
               <input
                 id="title"
-                className="input"
+                className={`input ${titleWarning && !title.trim() ? 'is-invalid' : ''}`}
                 maxLength={200}
                 value={title}
+                aria-invalid={titleWarning && !title.trim()}
+                aria-describedby={titleWarning && !title.trim() ? 'title-error' : undefined}
                 placeholder={quiz ? 'Ex. Testez vos connaissances sur le climat' : 'Ex. Votre avis sur notre atelier'}
                 onChange={(e) => {
                   setTitle(e.target.value)
                   setDirty(true)
                 }}
               />
+              {titleWarning && !title.trim() && (
+                <p id="title-error" className="editor-field-error">
+                  Donnez un titre à votre activité : sans titre, elle reste en brouillon et ne peut pas être lancée.
+                </p>
+              )}
             </div>
             <div className="field">
               <label htmlFor="desc">Description (facultatif)</label>
@@ -281,7 +332,7 @@ export default function ActivityEditorPage() {
               />
             </div>
           </div>
-          </details>
+          </section>
 
           <div className="editor-questions-heading"><h2>Vos questions <span>{questions.length}</span></h2><p className="muted small">{quiz ? 'Ajoutez les choix et indiquez les bonnes réponses.' : 'Ajoutez les choix proposés aux participants.'}</p></div>
           {questions.map((q, qi) => (

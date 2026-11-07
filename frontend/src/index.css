@@ -1,32 +1,43 @@
 /* QuizFlow — feuille de style unique. Variables en haut, composants ensuite. */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f6f7fb;
+  /* Palette 6 « Bleu marine & Pistache » — à modifier ici pour tout le site */
+  --bg: #f4f6f1;
   --surface: #ffffff;
-  --surface-2: #f1f3f9;
-  --border: #e3e6ef;
-  --text: #171a2b;
-  --muted: #646b84;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef0ff;
-  --success: #12a150;
-  --success-soft: #e7f7ee;
-  --danger: #dc2f45;
-  --danger-soft: #fdecee;
-  --warning: #c27803;
-  --warning-soft: #fff6e0;
+  --surface-2: #eef1ea;
+  --border: #e2e6dd;
+  --border-strong: #a8b59a;
+  --text: #1b2a4a;
+  --muted: #4e5a70;
+  --primary: #1b2a4a;
+  --primary-hover: #13203a;
+  --primary-soft: #e8ecf4;
+  --accent: #b5d38a;
+  --accent-hover: #a6c779;
+  --accent-strong: #5e7f2e;
+  --accent-soft: #eef5e2;
+  --on-dark-muted: #d5dce8;
+  --focus: #2f5d9e;
+  --success: #2f6b4f;
+  --success-soft: #e6f2ec;
+  --danger: #a3302a;
+  --danger-soft: #fbeae8;
+  --warning: #8a5a12;
+  --warning-soft: #fbf1dc;
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(23, 26, 43, 0.06), 0 4px 16px rgba(23, 26, 43, 0.06);
-  --c0: #4f46e5;
-  --c1: #0ea5e9;
-  --c2: #f59e0b;
-  --c3: #10b981;
-  --c4: #ec4899;
-  --c5: #8b5cf6;
+  --shadow: 0 1px 2px rgba(27, 42, 74, 0.06), 0 4px 16px rgba(27, 42, 74, 0.06);
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Couleurs des choix A à F */
+  --c0: #2f5d9e;
+  --c1: #5e7f2e;
+  --c2: #8c3b4f;
+  --c3: #7a5a10;
+  --c4: #1f6e6b;
+  --c5: #4e5a70;
   color-scheme: light;
 }
 
@@ -42,7 +53,7 @@ body,
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
@@ -59,6 +70,7 @@ h1,
 h2,
 h3 {
   margin: 0;
+  font-family: var(--font-display);
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
@@ -114,8 +126,10 @@ p {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
@@ -259,6 +273,16 @@ p {
   color: #fff;
 }
 
+/* Bouton d'accent (pistache) : réservé aux actions de l'assistant IA */
+.btn-accent {
+  background: var(--accent);
+  color: var(--primary);
+}
+
+.btn-accent:hover {
+  background: var(--accent-hover);
+}
+
 .btn-primary:hover {
   background: var(--primary-hover);
 }
@@ -280,7 +304,7 @@ p {
 }
 
 .btn-danger:hover {
-  background: #fad3d8;
+  background: #f6d5d1;
 }
 
 .btn-ghost {
@@ -440,8 +464,7 @@ p {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: radial-gradient(1200px 600px at 10% -10%, #e4e6ff 0%, transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, #dff3ff 0%, transparent 60%), var(--bg);
+  background: var(--bg);
 }
 
 .auth-card {
@@ -520,12 +543,12 @@ p {
 }
 
 .ai-panel {
-  background: linear-gradient(160deg, #f4f2ff 0%, #ffffff 60%);
-  border-color: #d9d4ff;
+  background: var(--surface);
+  border-color: var(--border);
 }
 
 .ai-suggestion {
-  border: 1px dashed #c9c2ff;
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 12px;
   background: #fff;
@@ -547,7 +570,115 @@ p {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--primary);
+}
+
+/* Fond 3D bleu marine (écran projeté et téléphones), avec un voile au centre pour la lisibilité. */
+.presenter-bg,
+.player-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.presenter-bg__veil,
+.player-bg__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 66% at 50% 50%, #1b2a4af0 0%, #1b2a4acc 55%, #1b2a4a00 100%);
+}
+.presenter > :not(.presenter-bg),
+.player > :not(.player-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Textes posés directement sur le fond bleu : en clair. Les cartes blanches gardent leur texte foncé. */
+.presenter-body,
+.player-body {
+  color: #fff;
+}
+.presenter-body .muted,
+.player-body .muted,
+.presenter-body .counter small,
+.presenter-body .bar-value small,
+.presenter-body .join-url {
+  color: var(--on-dark-muted);
+}
+.presenter-body .join-url strong {
+  color: #fff;
+}
+.presenter-body .big-code {
+  color: #c9e2a3;
+}
+.presenter-body .progress {
+  background: #ffffff26;
+}
+.presenter-body .progress > div {
+  background: var(--accent);
+}
+.presenter-body :is(.bar-track, .qr-box, .participant-chip, .podium-row, .kpi, .card, .alert, .table),
+.player-body :is(.answer-btn, .card, .alert) {
+  color: var(--text);
+}
+.presenter-body .kpi .label {
+  color: var(--muted);
+}
+.presenter-body .badge,
+.player-body .badge {
+  background: #ffffff1f;
+  color: #fff;
+}
+.presenter-body .badge-primary,
+.player-body .badge-primary {
+  background: var(--accent);
+  color: var(--primary);
+}
+.presenter-body .bar-track .badge-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.presenter .presenter-end {
+  color: var(--danger);
+}
+
+/* Réglages du minuteur (barre du bas de l'écran projeté) */
+.timer-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.timer-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer-settings .select {
+  width: auto;
+}
+.timer-settings__auto {
+  cursor: pointer;
+}
+.timer-settings__auto.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.auto-next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.player-question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .presenter-bar {
@@ -806,7 +937,7 @@ p {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--primary);
 }
 
 .player-top {

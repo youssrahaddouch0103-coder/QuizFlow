@@ -1,0 +1,16 @@
+.countdown { position: relative; display: grid; place-items: center; flex: none; }
+.countdown svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.countdown__track { fill: none; stroke: #ffffff26; stroke-width: 6; }
+.countdown__arc { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.25s linear, stroke 0.3s; }
+.countdown span { position: relative; font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; color: #fff; font-variant-numeric: tabular-nums; }
+.countdown.is-warning .countdown__arc { stroke: #f2c14e; }
+.countdown.is-urgent .countdown__arc { stroke: #ff7a6b; }
+.countdown.is-urgent span { color: #ffb3aa; animation: countdown-beat 1s ease-in-out infinite; }
+@keyframes countdown-beat { 50% { transform: scale(1.15); } }
+
+.session-clock { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--surface-2); color: var(--primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.session-clock svg { width: 16px; height: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown.is-urgent span { animation: none; }
+}

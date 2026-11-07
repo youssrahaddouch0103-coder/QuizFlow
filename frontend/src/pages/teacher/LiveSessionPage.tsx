@@ -1,11 +1,36 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { errorMessage, tokenStore } from '../../api/client'
 import type { LiveEvent, LiveStats, ParticipantJoinedPayload, ResultsView, TeacherSessionView } from '../../api/types'
 import { ConnectionIndicator, ErrorAlert, Logo, PageLoader, ResultBars, StateBadge } from '../../components/ui'
+import { CountdownRing, SessionClock } from '../../components/Timers'
+import { useCountdown } from '../../components/useCountdown'
 import { useSessionChannel } from '../../realtime/useSessionChannel'
+
+// Fond 3D de l'écran projeté, chargé à part.
+const Hero3D = lazy(() => import('../Hero3D'))
+
+const TIMER_OPTIONS = [0, 10, 20, 30, 45, 60, 90, 120]
+const AUTO_NEXT_DELAY = 6 // secondes d'affichage de la correction avant la question suivante
+
+function readPref(key: string, fallback: number) {
+  try {
+    const v = Number(localStorage.getItem(key))
+    return Number.isFinite(v) && localStorage.getItem(key) !== null ? v : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writePref(key: string, value: number) {
+  try {
+    localStorage.setItem(key, String(value))
+  } catch {
+    /* stockage indisponible : le réglage vaut pour cette page seulement */
+  }
+}
 
 /** Écran projeté par l'enseignant pendant le cours (W3 à W6). */
 export default function LiveSessionPage() {
@@ -17,6 +42,12 @@ export default function LiveSessionPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [showLive, setShowLive] = useState(true)
+  // Minuteur par question et enchaînement automatique, mémorisés pour les prochaines sessions.
+  const [timerSeconds, setTimerSeconds] = useState(() => readPref('quizflow.timerSeconds', 0))
+  const [autoNext, setAutoNext] = useState(() => readPref('quizflow.autoNext', 0) === 1)
+  const [autoNextIn, setAutoNextIn] = useState<number | null>(null)
+  const [autoNextCancelled, setAutoNextCancelled] = useState<string | null>(null)
+  const goNextRef = useRef<(() => void) | null>(null)
 
   const reload = useCallback(async () => {
     if (!id) return
@@ -60,6 +91,10 @@ export default function LiveSessionPage() {
         case 'SESSION_RESULTS':
           setResults(event.payload as ResultsView)
           break
+        case 'QUESTION_CLOSED':
+          // Fermeture par le minuteur (côté serveur) : on recharge pour afficher la correction.
+          void reload()
+          break
         case 'SESSION_CANCELLED':
           navigate('/dashboard')
           break
@@ -67,7 +102,7 @@ export default function LiveSessionPage() {
           break
       }
     },
-    [navigate],
+    [navigate, reload],
   )
 
   const status = useSessionChannel({
@@ -95,6 +130,49 @@ export default function LiveSessionPage() {
     }
   }
 
+  const changeTimer = (v: number) => {
+    setTimerSeconds(v)
+    writePref('quizflow.timerSeconds', v)
+  }
+  const changeAutoNext = (v: boolean) => {
+    setAutoNext(v)
+    writePref('quizflow.autoNext', v ? 1 : 0)
+  }
+  const timerArg = timerSeconds > 0 ? timerSeconds : undefined
+
+  // Compte à rebours de la question ouverte (null = pas de minuteur).
+  const secondsLeft = useCountdown(view?.currentQuestion, view?.state === 'QUESTION_OUVERTE')
+
+  // Filet de sécurité : si l'événement de fermeture n'arrive pas, on recharge 2 s après la fin du minuteur.
+  useEffect(() => {
+    if (secondsLeft !== 0 || view?.state !== 'QUESTION_OUVERTE') return
+    const t = window.setTimeout(() => void reload(), 2000)
+    return () => window.clearTimeout(t)
+  }, [secondsLeft, view?.state, reload])
+
+  // Enchaînement automatique : après la correction, question suivante (seulement avec un minuteur).
+  const closedQuestionId = view?.state === 'QUESTION_FERMEE' ? view.currentQuestion?.id ?? null : null
+  const hasNext = !!view && view.currentIndex !== undefined && view.currentIndex + 1 < view.questionCount
+  const shouldAutoNext = autoNext && timerSeconds > 0 && closedQuestionId !== null && hasNext && autoNextCancelled !== closedQuestionId
+  useEffect(() => {
+    if (!shouldAutoNext) {
+      setAutoNextIn(null)
+      return
+    }
+    let left = AUTO_NEXT_DELAY
+    setAutoNextIn(left)
+    const t = window.setInterval(() => {
+      left -= 1
+      setAutoNextIn(left)
+      if (left <= 0) {
+        window.clearInterval(t)
+        setAutoNextIn(null)
+        goNextRef.current?.()
+      }
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [shouldAutoNext, closedQuestionId])
+
   if (!view) return error ? <div className="container"><ErrorAlert message={error} /></div> : <PageLoader />
 
   const joinUrl = `${publicUrl}/join/${view.code}`
@@ -105,9 +183,44 @@ export default function LiveSessionPage() {
   const distribution = (closed ? view.closed?.distribution : view.stats?.distribution) ?? {}
   const answerCount = (closed ? view.closed?.answerCount : view.stats?.answerCount) ?? 0
   const correctIds = view.closed?.correctChoiceIds ?? []
+  const running = view.state === 'QUESTION_OUVERTE' || view.state === 'QUESTION_FERMEE'
+
+  goNextRef.current = () => void act(() => api.nextQuestion(view.id, timerArg))
+
+  const endNow = () => {
+    if (window.confirm('Terminer la session maintenant ? Les résultats seront calculés sur les questions déjà posées.')) {
+      void act(() => api.endSession(view.id))
+    }
+  }
+
+  const timerSettings = (
+    <div className="timer-settings">
+      <label>
+        Minuteur
+        <select className="select" value={timerSeconds} onChange={(e) => changeTimer(Number(e.target.value))}>
+          {TIMER_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {s === 0 ? 'Sans (je ferme moi-même)' : s < 60 ? `${s} secondes` : `${s / 60} min${s % 60 ? ` ${s % 60} s` : ''}`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={`timer-settings__auto ${timerSeconds === 0 ? 'is-disabled' : ''}`} title={timerSeconds === 0 ? 'Choisissez d’abord un minuteur' : undefined}>
+        <input type="checkbox" checked={autoNext && timerSeconds > 0} disabled={timerSeconds === 0} onChange={(e) => changeAutoNext(e.target.checked)} />
+        Enchaîner automatiquement
+      </label>
+    </div>
+  )
 
   return (
     <div className="presenter">
+      <div className="presenter-bg" aria-hidden="true">
+        <Suspense fallback={null}>
+          {/* Chaque nouvelle réponse ou arrivée fait réagir les objets. */}
+          <Hero3D variant="presenter" pulse={answerCount + view.participantCount} />
+        </Suspense>
+        <span className="presenter-bg__veil" />
+      </div>
       <div className="presenter-bar">
         <Link to="/dashboard" className="brand">
           <Logo /> QuizFlow
@@ -120,8 +233,14 @@ export default function LiveSessionPage() {
             Code <strong style={{ color: 'var(--primary)', letterSpacing: '0.08em' }}>{view.code}</strong>
           </span>
         )}
+        <SessionClock startedAt={view.startedAt} endedAt={view.endedAt} />
         <span className="badge">👥 {view.participantCount}</span>
         {active && <ConnectionIndicator status={status} />}
+        {running && (
+          <button className="btn btn-ghost btn-sm presenter-end" disabled={busy} onClick={endNow}>
+            Terminer la session
+          </button>
+        )}
       </div>
 
       <div className="presenter-body">
@@ -168,6 +287,7 @@ export default function LiveSessionPage() {
                 <div className="counter">
                   {answerCount} <small>/ {view.stats?.participantCount ?? view.participantCount} réponses</small>
                 </div>
+                {secondsLeft !== null && q.durationSeconds && <CountdownRing seconds={secondsLeft} total={q.durationSeconds} size={72} />}
               </div>
               <div className="progress">
                 <div style={{ width: `${(100 * answerCount) / Math.max(1, view.stats?.participantCount ?? view.participantCount)}%` }} />
@@ -235,7 +355,8 @@ export default function LiveSessionPage() {
               Annuler la session
             </button>
             <span className="spacer" />
-            <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.startSession(view.id))}>
+            {timerSettings}
+            <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.startSession(view.id, timerArg))}>
               Démarrer la première question →
             </button>
           </>
@@ -253,16 +374,23 @@ export default function LiveSessionPage() {
         )}
         {view.state === 'QUESTION_FERMEE' && (
           <>
-            <button className="btn btn-ghost" disabled={busy} onClick={() => window.confirm('Terminer la session maintenant ?') && act(() => api.endSession(view.id))}>
-              Terminer maintenant
-            </button>
+            {autoNextIn !== null ? (
+              <span className="auto-next">
+                Question suivante dans {Math.max(0, autoNextIn)} s
+                <button className="btn btn-ghost btn-sm" onClick={() => setAutoNextCancelled(closedQuestionId)}>
+                  Rester ici
+                </button>
+              </span>
+            ) : (
+              !isLast && timerSettings
+            )}
             <span className="spacer" />
             {isLast ? (
               <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.endSession(view.id))}>
                 Terminer et voir les résultats
               </button>
             ) : (
-              <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.nextQuestion(view.id))}>
+              <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.nextQuestion(view.id, timerArg))}>
                 Question suivante →
               </button>
             )}

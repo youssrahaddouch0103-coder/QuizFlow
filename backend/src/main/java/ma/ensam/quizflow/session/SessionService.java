@@ -1,5 +1,6 @@
 package ma.ensam.quizflow.session;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -99,16 +100,16 @@ public class SessionService {
     }
 
     @Transactional
-    public TeacherSessionView start(Long teacherId, UUID sessionId) {
+    public TeacherSessionView start(Long teacherId, UUID sessionId, Integer durationSeconds) {
         Session session = lockOwned(teacherId, sessionId);
         if (session.getState() != SessionState.EN_ATTENTE) {
             throw ApiException.invalidState("La session a déjà démarré");
         }
-        return openQuestion(session, 0);
+        return openQuestion(session, 0, durationSeconds);
     }
 
     @Transactional
-    public TeacherSessionView next(Long teacherId, UUID sessionId) {
+    public TeacherSessionView next(Long teacherId, UUID sessionId, Integer durationSeconds) {
         Session session = lockOwned(teacherId, sessionId);
         if (session.getState() != SessionState.QUESTION_FERMEE) {
             throw ApiException.invalidState("Fermez la question en cours avant de passer à la suivante");
@@ -117,7 +118,7 @@ public class SessionService {
         if (nextIndex >= session.getQuestionCount()) {
             throw ApiException.conflict("NO_MORE_QUESTIONS", "C'était la dernière question : terminez la session");
         }
-        return openQuestion(session, nextIndex);
+        return openQuestion(session, nextIndex, durationSeconds);
     }
 
     @Transactional
@@ -126,6 +127,25 @@ public class SessionService {
         if (session.getState() != SessionState.QUESTION_OUVERTE) {
             throw ApiException.invalidState("Aucune question ouverte");
         }
+        return doCloseQuestion(session);
+    }
+
+    /**
+     * Minuteur écoulé : fermeture automatique (appelée par QuestionTimerJob). Ne fait rien si
+     * l'enseignant a déjà fermé la question ou si l'échéance n'est pas atteinte.
+     */
+    @Transactional
+    public boolean closeExpiredQuestion(UUID sessionId, Instant now) {
+        Session session = sessions.findByIdForUpdate(sessionId).orElse(null);
+        if (session == null || session.getState() != SessionState.QUESTION_OUVERTE
+                || session.getQuestionDeadline() == null || session.getQuestionDeadline().isAfter(now)) {
+            return false;
+        }
+        doCloseQuestion(session);
+        return true;
+    }
+
+    private TeacherSessionView doCloseQuestion(Session session) {
         session.closeQuestion();
         ActivitySnapshot snapshot = registry.get(session);
         Activity.Question question = snapshot.questionAt(session.getCurrentQuestionIndex());
@@ -243,12 +263,12 @@ public class SessionService {
 
     // ------------------------------------------------------------------ privé
 
-    private TeacherSessionView openQuestion(Session session, int index) {
+    private TeacherSessionView openQuestion(Session session, int index, Integer durationSeconds) {
         ActivitySnapshot snapshot = registry.get(session);
         Activity.Question question = snapshot.questionAt(index);
-        session.openQuestion(index, question.getId());
+        session.openQuestion(index, question.getId(), durationSeconds);
         events.publish(session.getCode(), LiveEvent.of(EventType.QUESTION_OPENED,
-                QuestionLive.of(question, index, session.getQuestionCount())));
+                QuestionLive.of(question, index, session.getQuestionCount(), session)));
         return teacherView(session);
     }
 
@@ -261,7 +281,7 @@ public class SessionService {
                 || session.getState() == SessionState.QUESTION_FERMEE;
         if (inQuestion) {
             Activity.Question question = registry.get(session).questionAt(session.getCurrentQuestionIndex());
-            current = QuestionLive.of(question, session.getCurrentQuestionIndex(), session.getQuestionCount());
+            current = QuestionLive.of(question, session.getCurrentQuestionIndex(), session.getQuestionCount(), session);
             stats = liveStats(session, question);
             if (session.getState() == SessionState.QUESTION_FERMEE) {
                 closed = closedInfo(session, question);

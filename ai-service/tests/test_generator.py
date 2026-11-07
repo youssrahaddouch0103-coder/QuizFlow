@@ -73,3 +73,28 @@ def test_mock_llm_produces_valid_quiz_and_poll():
     poll = generate_questions(GenerateRequest(text=COURSE, count=2, type=ActivityType.SONDAGE), MockLlm())
     assert len(quiz.questions) == 3 and all(any(c.correct for c in q.choices) for q in quiz.questions)
     assert len(poll.questions) == 2 and not any(c.correct for q in poll.questions for c in q.choices)
+
+
+def test_page_references_are_removed_from_question_text():
+    from app.generator import _strip_page_reference
+
+    assert _strip_page_reference("Selon les pages 2-3, quelle propriété n'est pas un avantage ?") == "Quelle propriété n'est pas un avantage ?"
+    assert _strip_page_reference("D'après la page 4, que fait TCP ?") == "Que fait TCP ?"
+    assert _strip_page_reference("Selon le document, que fait UDP ?") == "Que fait UDP ?"
+    assert _strip_page_reference(
+        "Quelle affirmation décrit la différence entre un index clusterisé et un index non-clusterisé en SQL (pages 58-60) ?"
+    ) == "Quelle affirmation décrit la différence entre un index clusterisé et un index non-clusterisé en SQL ?"
+    assert _strip_page_reference("Que garantit TCP (p. 4) ?") == "Que garantit TCP ?"
+    # Une question normale n'est pas modifiée.
+    assert _strip_page_reference("Dans quel ordre TCP envoie-t-il les segments ?") == "Dans quel ordre TCP envoie-t-il les segments ?"
+
+
+def test_page_references_are_removed_from_choices():
+    from app.generator import clean_question
+    from app.schemas import ActivityType
+
+    q = clean_question(
+        {"text": "Que garantit TCP ?", "choices": [{"label": "L'ordre des segments (page 4)", "correct": True}, "La vitesse (p. 5)"]},
+        ActivityType.QUIZ,
+    )
+    assert [c.label for c in q.choices] == ["L'ordre des segments", "La vitesse"]

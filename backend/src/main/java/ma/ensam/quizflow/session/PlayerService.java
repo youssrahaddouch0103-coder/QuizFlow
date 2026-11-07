@@ -105,7 +105,7 @@ public class PlayerService {
         SessionState state = session.getState();
         if (state == SessionState.QUESTION_OUVERTE || state == SessionState.QUESTION_FERMEE) {
             Activity.Question q = registry.get(session).questionAt(session.getCurrentQuestionIndex());
-            question = QuestionLive.of(q, session.getCurrentQuestionIndex(), session.getQuestionCount());
+            question = QuestionLive.of(q, session.getCurrentQuestionIndex(), session.getQuestionCount(), session);
             Optional<Answer> mine = answers.findByParticipantIdAndQuestionId(me.getId(), q.getId());
             answered = mine.isPresent();
             myChoices = mine.map(a -> List.copyOf(a.getChoiceIds())).orElse(List.of());
@@ -136,6 +136,11 @@ public class PlayerService {
         if (session.getState() != SessionState.QUESTION_OUVERTE
                 || !req.questionId().equals(session.getCurrentQuestionId())) {
             throw ApiException.conflict("QUESTION_CLOSED", "Cette question n'accepte plus de réponses");
+        }
+        // Minuteur écoulé (1 s de tolérance pour le réseau) : la fermeture automatique est imminente.
+        if (session.getQuestionDeadline() != null
+                && java.time.Instant.now().isAfter(session.getQuestionDeadline().plusSeconds(1))) {
+            throw ApiException.conflict("QUESTION_CLOSED", "Temps écoulé : cette question n'accepte plus de réponses");
         }
         Activity.Question question = registry.get(session).question(req.questionId())
                 .orElseThrow(() -> ApiException.badRequest("INVALID_QUESTION", "Question inconnue"));

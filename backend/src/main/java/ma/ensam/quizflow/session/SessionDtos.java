@@ -1,5 +1,7 @@
 package ma.ensam.quizflow.session;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -7,6 +9,7 @@ import ma.ensam.quizflow.activity.Activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +33,32 @@ public final class SessionDtos {
 
     public record ChoiceLive(String id, String label) {}
 
+    /**
+     * Question en cours. durationSeconds : minuteur choisi (null = sans minuteur) ;
+     * remainingMs : temps restant au moment de l'envoi (le client compte à partir de la réception,
+     * ce qui évite les écarts d'horloge entre le serveur et les téléphones).
+     */
+    /** Corps facultatif de « démarrer » et « question suivante » : minuteur en secondes (absent = sans minuteur). */
+    public record TimerRequest(@Min(value = 5, message = "5 secondes minimum")
+                               @Max(value = 600, message = "10 minutes maximum") Integer durationSeconds) {}
+
     public record QuestionLive(String id, int index, int total, String text, ChoiceMode choiceMode,
-                               List<ChoiceLive> choices) {
+                               List<ChoiceLive> choices, Integer durationSeconds, Long remainingMs) {
 
         public static QuestionLive of(Activity.Question q, int index, int total) {
+            return of(q, index, total, null);
+        }
+
+        public static QuestionLive of(Activity.Question q, int index, int total, Session session) {
+            Integer duration = session == null ? null : session.getQuestionDurationSeconds();
+            Long remaining = null;
+            if (session != null && session.getQuestionDeadline() != null
+                    && session.getState() == SessionState.QUESTION_OUVERTE) {
+                remaining = Math.max(0L, Duration.between(Instant.now(), session.getQuestionDeadline()).toMillis());
+            }
             return new QuestionLive(q.getId(), index, total, q.getText(), q.getChoiceMode(),
-                    q.getChoices().stream().map(c -> new ChoiceLive(c.getId(), c.getLabel())).toList());
+                    q.getChoices().stream().map(c -> new ChoiceLive(c.getId(), c.getLabel())).toList(),
+                    duration, remaining);
         }
     }
 
