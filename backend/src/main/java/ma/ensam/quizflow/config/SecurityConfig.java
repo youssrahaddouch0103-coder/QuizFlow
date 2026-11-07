@@ -36,6 +36,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/email/verify", "/api/auth/email/resend").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**",

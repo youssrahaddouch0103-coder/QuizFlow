@@ -94,6 +94,23 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(jwt, verified);
     }
 
+    @Test void originalPasswordResumesPendingRegistrationAndAllowsResend() {
+        var p = registration(now.minusSeconds(1), 0);
+        when(pending.findByEmail(p.email())).thenReturn(Optional.of(p));
+
+        var resumed = service.start(new RegisterRequest(p.email(), "motdepasse", "Autre nom"));
+
+        assertThat(resumed.challengeId()).isEqualTo(p.id());
+        assertThat(resumed.expiresAt()).isEqualTo(p.expiresAt());
+        assertThat(resumed.resendAvailableAt()).isEqualTo(p.resendAvailableAt());
+        verify(pending, never()).insert(any(), any());
+        verifyNoInteractions(mail);
+
+        var resent = service.resend(resumed.challengeId());
+        assertThat(resent.expiresAt()).isAfter(resumed.expiresAt());
+        verify(mail).sendVerification(eq(p.email()), matches("[0-9]{6}"), eq(10L));
+    }
+
     @Test void expiredCodeCannotCreateAccount() {
         var p = registration(now, 0);
         assertThatThrownBy(() -> service.verify(p.id(), "012345")).isInstanceOf(ApiException.class);

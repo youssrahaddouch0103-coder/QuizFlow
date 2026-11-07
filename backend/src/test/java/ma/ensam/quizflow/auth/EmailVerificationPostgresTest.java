@@ -133,13 +133,13 @@ class EmailVerificationPostgresTest {
         assertThat(teachers.count()).isEqualTo(1);
     }
 
-    @Test void simultaneousRegistrationsDoNotOverwriteCredentials() throws Exception {
+    @Test void simultaneousRegistrationsWithSameCredentialsShareOneChallenge() throws Exception {
         var barrier = new CyclicBarrier(2);
         try (var executor = Executors.newFixedThreadPool(2)) {
             Callable<java.util.UUID> start = () -> { barrier.await(10, TimeUnit.SECONDS); return service.start(request()).challengeId(); };
             var a = executor.submit(start);
             var b = executor.submit(start);
-            assertThat(a.get(20, TimeUnit.SECONDS)).isNotEqualTo(b.get(20, TimeUnit.SECONDS));
+            assertThat(a.get(20, TimeUnit.SECONDS)).isEqualTo(b.get(20, TimeUnit.SECONDS));
         }
         assertThat(jdbc.queryForObject("SELECT count(*) FROM pending_registrations", Long.class)).isEqualTo(1);
         verify(mail, times(1)).sendVerification(anyString(), anyString(), anyLong());
