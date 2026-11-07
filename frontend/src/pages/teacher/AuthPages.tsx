@@ -7,6 +7,8 @@ import AuthPageLayout from './AuthPageLayout'
 import AuthField from './AuthField'
 import PasswordInput from './PasswordInput'
 import './AuthPages.css'
+import { readPending, storePending } from '../../auth/pendingRegistration'
+import EmailVerificationForm from './EmailVerificationForm'
 
 export function LoginPage() {
   const { teacher, login } = useAuth()
@@ -50,6 +52,7 @@ export function LoginPage() {
           <label htmlFor="password">Mot de passe</label>
           <PasswordInput id="password" className="input" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </AuthField>
+        <Link className="small" to="/forgot-password">Mot de passe oublié ?</Link>
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
           {busy ? 'Connexion…' : 'Se connecter'}
         </button>
@@ -65,7 +68,7 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const { teacher, register } = useAuth()
-  const navigate = useNavigate()
+  const [pending, setPending] = useState(readPending)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -79,14 +82,17 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      await register(email, password, displayName)
-      navigate('/dashboard')
+      const response = await register(email, password, displayName)
+      setPassword('')
+      setPending(response)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
   }
+
+  if (pending) return <EmailVerificationForm pending={pending} onUpdate={setPending} onRestart={() => { storePending(null); setPending(null) }} />
 
   return (
     <AuthPageLayout mode="register">

@@ -1,4 +1,5 @@
 import { request } from './client'
+import type { PendingRegistration } from '../auth/pendingRegistration'
 import type {
   Activity,
   ActivityRequest,
@@ -20,7 +21,11 @@ const PLAYER_HEADER = 'X-Participant-Token'
 export const api = {
   // Authentification
   register: (email: string, password: string, displayName: string) =>
-    request<AuthResponse>('/api/auth/register', { method: 'POST', body: { email, password, displayName }, auth: false }),
+    request<PendingRegistration>('/api/auth/register', { method: 'POST', body: { email, password, displayName }, auth: false }),
+  verifyEmail: (challengeId: string, code: string) =>
+    request<AuthResponse>('/api/auth/email/verify', { method: 'POST', body: { challengeId, code }, auth: false }),
+  resendEmail: (challengeId: string) =>
+    request<PendingRegistration>('/api/auth/email/resend', { method: 'POST', body: { challengeId }, auth: false }),
   login: (email: string, password: string) =>
     request<AuthResponse>('/api/auth/login', { method: 'POST', body: { email, password }, auth: false }),
   me: () => request<Teacher>('/api/auth/me'),

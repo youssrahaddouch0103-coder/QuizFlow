@@ -2,12 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { api } from '../api/api'
 import { setUnauthorizedHandler, tokenStore } from '../api/client'
 import type { Teacher } from '../api/types'
+import { storePending, type PendingRegistration } from './pendingRegistration'
 
 interface AuthState {
   teacher: Teacher | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, displayName: string) => Promise<void>
+  register: (email: string, password: string, displayName: string) => Promise<PendingRegistration>
+  verifyEmail: (challengeId: string, code: string) => Promise<void>
   logout: () => void
 }
 
@@ -47,8 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       register: async (email, password, displayName) => {
         const res = await api.register(email, password, displayName)
+        storePending(res)
+        return res
+      },
+      verifyEmail: async (challengeId, code) => {
+        const res = await api.verifyEmail(challengeId, code)
         tokenStore.set(res.token)
         setTeacher(res.teacher)
+        storePending(null)
       },
     }),
     [teacher, loading, logout],

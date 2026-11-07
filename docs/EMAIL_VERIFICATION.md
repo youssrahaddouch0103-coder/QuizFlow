@@ -1,8 +1,10 @@
 # Vérification email — lot backend
 
-Ce lot modifie le contrat d'inscription. **Ne pas le déployer avec le frontend actuel** :
-le formulaire et le script smoke attendent encore un JWT dès `/register`.
-L'écran de confirmation fera l'objet du lot suivant. Google, récupération de mot de passe,
+Le formulaire d'inscription gère la réponse 202 puis affiche la saisie du code,
+son expiration et le renvoi. Le JWT est enregistré uniquement après confirmation.
+Le challenge est conservé dans sessionStorage pour reprendre après actualisation,
+sans conserver le mot de passe ni le code. Le script smoke utilise désormais un compte
+confirmé via SMOKE_EMAIL et SMOKE_PASSWORD. Google, récupération de mot de passe,
 renouvellement/révocation des JWT et vérification rétroactive ne font pas partie de ce lot.
 
 ## Configuration avant démarrage (aucune valeur secrète dans Git)
@@ -20,8 +22,8 @@ Définir dans l'environnement du backend :
 
 Les noms Spring correspondants sont `app.email-verification.hmac-key`,
 `app.email-verification.from` et `spring.mail.*`. Aucun fichier `.env` n'est chargé
-automatiquement par Spring Boot. La configuration Docker existante ne transmet pas encore
-ces paramètres : son adaptation nécessitera un lot approuvé avant démarrage via Compose.
+automatiquement par Spring Boot. Docker Compose transmet ces paramètres depuis son
+environnement ou le fichier .env local. Ne jamais versionner les secrets SMTP ou HMAC.
 
 Paramètres facultatifs : `app.email-verification.code-ttl=10m`, `resend-delay=60s`,
 `retention=24h`, `max-attempts=5`, `email-requests-per-hour=5`, `ip-requests-per-minute=60`.
@@ -40,7 +42,7 @@ hors dépôt. Ne pas désactiver TLS pour un fournisseur distant.
 
 `V2__email_verification.sql` ajoute uniquement des tables/index. Elle ne modifie pas les comptes
 existants. Flyway l'appliquera au prochain démarrage autorisé : ne pas démarrer le backend sur
-une base existante avant validation de cette opération et de la migration du frontend.
+une base existante sans sauvegarde et validation de la configuration d'envoi.
 
 Les projections temporaires utilisent JDBC, déjà fourni par JPA, sans nouvelle dépendance.
 La création du compte utilise le repository JPA existant. Les deux participent à la même

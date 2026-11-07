@@ -54,10 +54,13 @@ async function main() {
   console.log(`QuizFlow smoke test sur ${BASE} avec ${STUDENTS} étudiant(s)\n`)
 
   // 1. Enseignant
-  const email = `prof${Date.now()}@test.ma`
-  const reg = await call('POST', '/api/auth/register', { body: { email, password: 'motdepasse', displayName: 'Prof Test' } })
-  ok(reg.status === 201, 'inscription enseignant')
-  const token = reg.data.token
+  const email = process.env.SMOKE_EMAIL
+  const password = process.env.SMOKE_PASSWORD
+  if (!email || !password) throw new Error('Définir SMOKE_EMAIL et SMOKE_PASSWORD pour un compte de test confirmé via le parcours email.')
+  const login = await call('POST', '/api/auth/login', { body: { email, password } })
+  ok(login.status === 200 && !!login.data.token, 'connexion du compte confirmé')
+  if (login.status !== 200 || !login.data.token) throw new Error('Connexion du compte de test impossible')
+  const token = login.data.token
 
   // 2. Activité : un brouillon d'abord, puis une version complète
   const draft = await call('POST', '/api/activities', { token, body: { type: 'QUIZ', title: 'Brouillon', questions: [] } })

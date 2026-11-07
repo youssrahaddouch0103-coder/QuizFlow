@@ -63,8 +63,16 @@ public class EmailVerificationService {
                 pending.delete(existing.get().id());
                 existing = java.util.Optional.empty();
             }
-            // Never disclose an existing challenge or overwrite its password/name.
-            if (teachers.findByEmailIgnoreCase(email).isPresent() || existing.isPresent()) {
+            if (teachers.findByEmailIgnoreCase(email).isPresent()) {
+                return response(id, now);
+            }
+            if (existing.isPresent()) {
+                var registration = existing.get();
+                // Resume only with the original password and keep the current code and deadlines.
+                if (encoder.matches(request.password(), registration.passwordHash())) {
+                    return new PendingRegistrationResponse(registration.id(), registration.expiresAt(),
+                            registration.resendAvailableAt(), MESSAGE);
+                }
                 return response(id, now);
             }
             String code = codes.generate();

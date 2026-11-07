@@ -18,6 +18,9 @@ public class Teacher {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "auth_version", nullable = false)
+    private long authVersion;
+
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
@@ -43,6 +46,10 @@ public class Teacher {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public long getAuthVersion() {
+        return authVersion;
     }
 
     public String getDisplayName() {
