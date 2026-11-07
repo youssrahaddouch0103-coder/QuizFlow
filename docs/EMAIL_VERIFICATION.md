@@ -3,11 +3,27 @@
 Le formulaire d'inscription gère la réponse 202 puis affiche la saisie du code,
 son expiration et le renvoi. Le JWT est enregistré uniquement après confirmation.
 Le challenge est conservé dans sessionStorage pour reprendre après actualisation,
-sans conserver le mot de passe ni le code. Le script smoke utilise désormais un compte
-confirmé via SMOKE_EMAIL et SMOKE_PASSWORD. Google, récupération de mot de passe,
+sans conserver le mot de passe ni le code. Le script smoke confirme son compte tout seul en mode
+développement, ou utilise un compte confirmé via SMOKE_EMAIL et SMOKE_PASSWORD. Google, récupération de mot de passe,
 renouvellement/révocation des JWT et vérification rétroactive ne font pas partie de ce lot.
 
-## Configuration avant démarrage (aucune valeur secrète dans Git)
+## Mode développement : sans serveur email (`APP_MAIL_MODE=log`)
+
+Avec Docker en local, `APP_MAIL_MODE=log` est la valeur par défaut : aucun email n'est envoyé,
+les codes (inscription et mot de passe oublié) sont écrits dans les logs du backend.
+
+```bash
+docker compose logs backend | findstr "MODE DEV"     # Windows
+docker compose logs backend | grep "MODE DEV"        # Mac / Linux
+```
+
+Sans `APP_EMAILVERIFICATION_HMACKEY`, une clé temporaire est générée au démarrage (les codes en attente
+ne survivent pas à un redémarrage). Le test `npm run smoke` crée et confirme son compte tout seul dans ce mode.
+**Ne jamais utiliser ce mode en production** : n'importe qui ayant accès aux logs verrait les codes.
+
+## Mode production : envoi réel (`APP_MAIL_MODE=smtp`)
+
+### Configuration avant démarrage (aucune valeur secrète dans Git)
 
 Définir dans l'environnement du backend :
 

@@ -54,8 +54,11 @@ services:
       MONGO_URI: mongodb://mongo:27017/quizflow
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-dev-secret-change-me-0123456789}
       AI_SERVICE_URL: http://ai-service:8000
+      # En local, les codes de confirmation s'affichent dans les logs du backend (APP_MAIL_MODE=log).
+      # Mettre APP_MAIL_MODE=smtp dans .env et configurer le SMTP pour envoyer de vrais emails.
+      APP_MAIL_MODE: ${APP_MAIL_MODE:-log}
       APP_EMAILVERIFICATION_HMACKEY: ${APP_EMAILVERIFICATION_HMACKEY:-}
-      APP_EMAILVERIFICATION_FROM: ${APP_EMAILVERIFICATION_FROM:-}
+      APP_EMAILVERIFICATION_FROM: ${APP_EMAILVERIFICATION_FROM:-no-reply@quizflow.local}
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}

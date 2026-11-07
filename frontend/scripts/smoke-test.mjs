@@ -4,10 +4,15 @@
 //   node scripts/smoke-test.mjs                         # contre http://localhost:3000 (Docker)
 //   node scripts/smoke-test.mjs http://localhost:5173 50  # autre adresse, 50 étudiants (test de charge)
 //
+// Le compte enseignant est créé et confirmé automatiquement si le backend est en mode APP_MAIL_MODE=log.
+// Avec un vrai SMTP, définir SMOKE_EMAIL et SMOKE_PASSWORD (compte déjà confirmé).
+//
 // Vérifie : création, lancement, connexion WebSocket, réponses, refus des doublons et des réponses tardives,
 // statistiques en direct, clôture, scores et classement.
 
 import { Client } from '@stomp/stompjs'
+import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const BASE = (process.argv[2] ?? 'http://localhost:3000').replace(/\/$/, '')
 const STUDENTS = Number(process.argv[3] ?? 5)
@@ -50,17 +55,39 @@ function connect(code, token) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+const ROOT = fileURLToPath(new URL('../..', import.meta.url))
+
+async function loginExisting() {
+  const login = await call('POST', '/api/auth/login', { body: { email: process.env.SMOKE_EMAIL, password: process.env.SMOKE_PASSWORD } })
+  ok(login.status === 200 && !!login.data.token, 'connexion du compte de test')
+  if (!login.data?.token) throw new Error('Connexion du compte de test impossible')
+  return login.data.token
+}
+
+/** Inscription + confirmation : le code est lu dans `docker compose logs backend` (mode développement). */
+async function registerWithLoggedCode() {
+  const email = `prof${Date.now()}@test.ma`
+  const reg = await call('POST', '/api/auth/register', { body: { email, password: 'motdepasse', displayName: 'Prof Test' } })
+  ok(reg.status === 202 && !!reg.data.challengeId, 'inscription enseignant (en attente de confirmation)')
+  const pattern = new RegExp(`Code de confirmation pour ${email.replace(/[.]/g, '\\.')} : (\\d{6})`)
+  let code = null
+  for (let i = 0; i < 10 && !code; i++) {
+    await wait(500)
+    const logs = execSync('docker compose logs backend --since 2m', { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    code = logs.match(pattern)?.[1] ?? null
+  }
+  if (!code) throw new Error('Code introuvable dans les logs : le backend est-il en mode APP_MAIL_MODE=log ? Sinon, utilisez SMOKE_EMAIL et SMOKE_PASSWORD.')
+  const verify = await call('POST', '/api/auth/email/verify', { body: { challengeId: reg.data.challengeId, code } })
+  ok(verify.status === 200 && !!verify.data.token, 'email confirmé avec le code reçu')
+  return verify.data.token
+}
+
 async function main() {
   console.log(`QuizFlow smoke test sur ${BASE} avec ${STUDENTS} étudiant(s)\n`)
 
-  // 1. Enseignant
-  const email = process.env.SMOKE_EMAIL
-  const password = process.env.SMOKE_PASSWORD
-  if (!email || !password) throw new Error('Définir SMOKE_EMAIL et SMOKE_PASSWORD pour un compte de test confirmé via le parcours email.')
-  const login = await call('POST', '/api/auth/login', { body: { email, password } })
-  ok(login.status === 200 && !!login.data.token, 'connexion du compte confirmé')
-  if (login.status !== 200 || !login.data.token) throw new Error('Connexion du compte de test impossible')
-  const token = login.data.token
+  // 1. Enseignant : compte existant (SMOKE_EMAIL / SMOKE_PASSWORD) ou nouveau compte confirmé
+  //    automatiquement en lisant le code dans les logs du backend (mode APP_MAIL_MODE=log).
+  const token = process.env.SMOKE_EMAIL ? await loginExisting() : await registerWithLoggedCode()
 
   // 2. Activité : un brouillon d'abord, puis une version complète
   const draft = await call('POST', '/api/activities', { token, body: { type: 'QUIZ', title: 'Brouillon', questions: [] } })

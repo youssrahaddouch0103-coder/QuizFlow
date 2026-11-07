@@ -1,5 +1,6 @@
 package ma.ensam.quizflow.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +18,9 @@ public class EmailVerificationConfiguration {
         return Clock.systemUTC();
     }
 
+    /** Serveur SMTP obligatoire, sauf en mode développement (app.mail.mode=log). */
     @Bean
+    @ConditionalOnProperty(prefix = "app.mail", name = "mode", havingValue = "smtp", matchIfMissing = true)
     public JavaMailSender verificationMailSender(MailProperties properties) {
         if (properties.getHost() == null || properties.getHost().isBlank()) {
             throw new IllegalStateException("Configurer le serveur SMTP pour la vérification email");
