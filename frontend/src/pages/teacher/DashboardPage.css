@@ -9,12 +9,31 @@
 
 .dashboard-page .dashboard-heading {
   display: grid;
-  gap: 28px;
+  gap: 20px;
   align-items: center;
   margin-bottom: 0;
-  padding: clamp(18px, 4vw, 34px);
+  padding: clamp(16px, 3vw, 26px) clamp(18px, 3.5vw, 32px);
   color: #fff;
-  background: linear-gradient(120deg, #302765, #5140b5);
+  background: var(--primary);
+}
+
+.dashboard-hero-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: clamp(20px, 4vw, 48px);
+  align-items: center;
+}
+
+.dashboard-hero-hint {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--on-dark-muted);
+  max-width: 420px;
+}
+
+@media (max-width: 860px) {
+  .dashboard-hero-top { grid-template-columns: minmax(0, 1fr); }
 }
 
 .dashboard-heading h1 {
@@ -23,13 +42,13 @@
 }
 
 .dashboard-greeting {
-  color: #dedaff;
+  color: var(--on-dark-muted);
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
 .dashboard-page .dashboard-sessions {
-  border-color: #c9c2ff;
+  border-color: var(--border-strong);
   background: var(--primary-soft);
   overflow-wrap: anywhere;
 }
@@ -78,8 +97,8 @@
   place-items: center;
   width: 88px;
   height: 88px;
-  color: #5140b5;
-  background: #f4f1fc;
+  color: var(--primary);
+  background: var(--accent-soft);
   border-radius: 28px;
 }
 
@@ -114,17 +133,17 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 20px;
+  padding: 12px 18px;
   border: 2px solid transparent;
   border-radius: 16px;
   background: #fff;
-  color: #25213e;
+  color: var(--text);
   text-decoration: none;
 }
 
 .dashboard-create-link:hover {
-  border-color: #c9c2ff;
-  background: #f5f3ff;
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
 }
 
 .dashboard-create-link strong,
@@ -134,17 +153,17 @@
 
 .dashboard-create-link small {
   margin-top: 4px;
-  color: #59566c;
+  color: var(--muted);
 }
 
 .dashboard-create-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 68px;
-  height: 68px;
-  border-radius: 20px;
-  color: #5140b5;
-  background: #eeebff;
+  flex: 0 0 52px;
+  height: 52px;
+  border-radius: 15px;
+  color: var(--primary);
+  background: var(--accent-soft);
 }
 
 .dashboard-create-icon--poll {
@@ -154,8 +173,8 @@
 }
 
 .dashboard-create-icon svg {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
 }
 
 .dashboard-create-arrow {
@@ -192,7 +211,7 @@
   margin-left: 4px;
   padding: 1px 5px;
   border-radius: 6px;
-  background: rgba(100, 90, 150, .1);
+  background: rgba(27, 42, 74, .08);
   font-size: .75rem;
 }
 

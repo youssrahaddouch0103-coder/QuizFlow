@@ -228,17 +228,13 @@ export default function ActivityEditorPage() {
       )}
 
       {!readOnly && (
-        <details className="editor-ai-disclosure">
-          <summary>Créer à partir d’un texte <span>Aide IA</span></summary>
-          <AiPanel type={type} onAdd={addGenerated} />
-        </details>
+        <AiPanel type={type} onAdd={addGenerated} />
       )}
 
       <div className="editor-layout">
         <QuestionNavigator questions={questions} selected={activeQuestion} onSelect={setSelectedQuestion} onAdd={addQuestion} readOnly={readOnly} />
         <fieldset disabled={readOnly} className="stack" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          <details className="card editor-activity-settings">
-            <summary>{title.trim() || 'Nommer votre activité'} <span>Informations de l’activité</span></summary>
+          <section className="card editor-activity-settings">
           <div className="stack editor-intro">
             <div className="editor-section-heading">
               <ActivitySymbol kind={quiz ? 'quiz' : 'poll'} />
@@ -281,7 +277,7 @@ export default function ActivityEditorPage() {
               />
             </div>
           </div>
-          </details>
+          </section>
 
           <div className="editor-questions-heading"><h2>Vos questions <span>{questions.length}</span></h2><p className="muted small">{quiz ? 'Ajoutez les choix et indiquez les bonnes réponses.' : 'Ajoutez les choix proposés aux participants.'}</p></div>
           {questions.map((q, qi) => (
