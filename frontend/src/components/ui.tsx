@@ -6,8 +6,9 @@ import { LETTERS, stateLabel, statusLabel } from '../lib/format'
 export function Logo({ size = 30 }: { size?: number }) {
   return (
     <svg className="brand-logo" width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <rect width="32" height="32" rx="8" fill="#4f46e5" />
-      <path d="M9 21V11l7 5 7-5v10" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="32" height="32" rx="8" fill="#1b2a4a" />
+      <circle cx="15.5" cy="15" r="6.5" stroke="#fff" strokeWidth="2.6" fill="none" />
+      <path d="M18.5 18.5l4.5 4.5" stroke="#b5d38a" strokeWidth="2.8" strokeLinecap="round" />
     </svg>
   )
 }

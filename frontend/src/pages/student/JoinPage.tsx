@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { ApiError, errorMessage } from '../../api/client'
@@ -6,6 +6,7 @@ import type { PublicSessionInfo } from '../../api/types'
 import { ErrorAlert, Logo, Spinner } from '../../components/ui'
 import { playerStore } from '../../lib/playerStore'
 import { typeLabel } from '../../lib/format'
+import QrScanner from './QrScanner'
 
 /** W4 : l'étudiant saisit le code (ou arrive par le QR code), puis choisit un pseudo. */
 export default function JoinPage() {
@@ -17,6 +18,17 @@ export default function JoinPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [checking, setChecking] = useState(!!codeParam)
+  const [scanning, setScanning] = useState(false)
+
+  const onScanned = useCallback(
+    (c: string) => {
+      setScanning(false)
+      setCode(c)
+      navigate(`/join/${c}`)
+    },
+    [navigate],
+  )
+  const closeScanner = useCallback(() => setScanning(false), [])
 
   // Arrivée par le QR code : on vérifie la session, et on reconnecte si l'étudiant y est déjà.
   useEffect(() => {
@@ -79,15 +91,30 @@ export default function JoinPage() {
           </div>
         )}
 
-        {!checking && !info && (
+        {!checking && !info && scanning && (
+          <div className="stack">
+            <h2 style={{ textAlign: 'center' }}>Scanner le QR code</h2>
+            <QrScanner onCode={onScanned} onClose={closeScanner} />
+          </div>
+        )}
+
+        {!checking && !info && !scanning && (
           <form className="stack" onSubmit={submitCode}>
             <h2 style={{ textAlign: 'center' }}>Rejoindre une session</h2>
             <ErrorAlert message={error} />
+            <button type="button" className="btn btn-accent btn-lg btn-block join-scan-btn" onClick={() => setScanning(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+                <path d="M9 9h2v2H9zM13 13h2v2h-2zM13 9h2M9 15h2" />
+              </svg>
+              Scanner le QR code
+            </button>
+            <div className="join-or">ou saisissez le code</div>
             <input
               className="input code-input"
               inputMode="text"
               autoComplete="off"
-              autoFocus
+              aria-label="Code de la session"
               maxLength={6}
               placeholder="CODE"
               value={code}

@@ -1,0 +1,72 @@
+/* Vitrine animée de la bannière du tableau de bord */
+.showcase { display: grid; gap: 10px; justify-items: center; }
+
+.showcase-stage { position: relative; width: min(100%, 420px); display: grid; }
+
+.showcase-card {
+  grid-area: 1 / 1;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* carte « suivante » en arrière-plan, légèrement penchée */
+.showcase-card--back {
+  transform: rotate(3deg) translate(12px, 6px) scale(0.96);
+  background: #2a3d66;
+  color: var(--on-dark-muted);
+  opacity: 0.85;
+}
+.showcase-card--back .showcase-chip { background: #ffffff1f; color: #fff; }
+
+.showcase-card--front {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 22px 40px -22px #0d162a;
+  animation: showcase-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes showcase-in {
+  from { opacity: 0; transform: translateY(18px) rotate(-2deg) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.showcase-top { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+.showcase-chip { padding: 3px 9px; border-radius: 999px; background: var(--accent); color: var(--primary); font-size: 0.72rem; font-weight: 700; }
+.showcase-chip.is-poll { background: #dfe7f5; }
+.showcase-subject { color: var(--muted); font-weight: 600; }
+.showcase-live { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-strong); font-weight: 700; }
+.showcase-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-strong); animation: showcase-pulse 1.4s ease-in-out infinite; }
+
+@keyframes showcase-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #5e7f2e66; }
+  50% { box-shadow: 0 0 0 6px #5e7f2e00; }
+}
+
+.showcase-question { margin: 8px 0 10px; font-family: var(--font-display); font-weight: 700; font-size: 1rem; line-height: 1.25; }
+
+.showcase-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.showcase-bars li { display: grid; grid-template-columns: 24px minmax(0, 1fr) 38px; align-items: center; gap: 8px; }
+.showcase-letter { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; color: #fff; font-size: 0.72rem; font-weight: 700; }
+.showcase-track { position: relative; height: 24px; border-radius: 7px; background: var(--surface-2); overflow: hidden; }
+.showcase-fill { position: absolute; inset: 0 auto 0 0; opacity: 0.2; border-radius: 8px; animation: showcase-grow 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.is-correct .showcase-fill { opacity: 0.32; }
+.showcase-label { position: relative; display: block; padding: 0 10px; line-height: 24px; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.is-correct .showcase-label { font-weight: 700; color: var(--accent-strong); }
+.showcase-pct { text-align: right; font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+@keyframes showcase-grow { from { width: 0; } }
+
+.showcase-foot { display: flex; justify-content: space-between; margin-top: auto; padding-top: 10px; font-size: 0.75rem; color: var(--muted); }
+.showcase-code { font-weight: 700; color: var(--primary); letter-spacing: 0.04em; }
+
+.showcase-dots { display: flex; gap: 6px; }
+.showcase-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: #ffffff55; cursor: pointer; transition: width 0.3s, background 0.3s; }
+.showcase-dots button.is-active { width: 24px; background: var(--accent); }
+.showcase-dots button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-card--front, .showcase-fill, .showcase-live i { animation: none; }
+}
