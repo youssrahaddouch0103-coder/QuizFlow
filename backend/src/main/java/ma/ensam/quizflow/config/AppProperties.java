@@ -19,5 +19,6 @@ public record AppProperties(
 
     public record SessionProps(int inactivityMinutes, long timeoutCheckMs) {}
 
-    public record Ai(String url, int timeoutSeconds) {}
+    /** internalToken : secret partagé avec le service IA (en-tête X-Internal-Token). */
+    public record Ai(String url, int timeoutSeconds, String internalToken) {}
 }

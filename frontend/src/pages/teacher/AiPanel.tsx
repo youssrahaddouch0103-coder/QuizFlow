@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { api } from '../../api/api'
 import { errorMessage } from '../../api/client'
-import type { ActivityType, AiGeneratedQuestion } from '../../api/types'
+import type { ActivityType, AiGeneratedQuestion, CourseDocument } from '../../api/types'
 import { ErrorAlert, Spinner } from '../../components/ui'
+import DocumentLibrary from './DocumentLibrary'
 import './AiPanel.css'
 
 type Source = 'text' | 'pdf'
@@ -20,12 +21,18 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<AiGeneratedQuestion[]>([])
   const [model, setModel] = useState<string | null>(null)
+  const [doc, setDoc] = useState<CourseDocument | null>(null)
+  const [topic, setTopic] = useState('')
+  const selectDoc = useCallback((d: CourseDocument | null) => setDoc(d), [])
 
   const generate = async () => {
     setBusy(true)
     setError(null)
     try {
-      const res = await api.generateQuestions({ text, type, count, difficulty, language: 'fr' })
+      const res =
+        source === 'pdf' && doc
+          ? await api.generateFromDocument(doc.id, { topic: topic.trim() || undefined, type, count, difficulty, language: 'fr' })
+          : await api.generateQuestions({ text, type, count, difficulty, language: 'fr' })
       setSuggestions(res.questions)
       setModel(res.model)
     } catch (e) {
@@ -42,7 +49,10 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
 
   const length = text.trim().length
   const tooShort = length < 50
-  const step = suggestions.length > 0 ? 2 : length > 0 ? 1 : 0
+  const docReady = doc?.status === 'READY'
+  const canGenerate = source === 'text' ? !tooShort : docReady
+  const hasInput = source === 'text' ? length > 0 : !!doc
+  const step = suggestions.length > 0 ? 2 : hasInput ? 1 : 0
 
   return (
     <section className="ai-hero" aria-labelledby="ai-hero-title">
@@ -53,7 +63,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
             Votre cours devient un quiz en <span>30 secondes</span>.
           </h2>
           <p className="ai-hero__lead">
-            Collez un passage de votre cours. Les questions s’appuient uniquement sur votre contenu, et vous gardez celles qui vous conviennent.
+            Collez un passage ou importez votre PDF. Les questions s’appuient uniquement sur votre contenu, avec la page d’où elles viennent, et vous gardez celles qui vous conviennent.
           </p>
           <ol className="ai-hero__steps">
             {['Ajoutez votre texte ou votre PDF', 'Relisez les questions proposées', 'Ajoutez celles que vous gardez'].map((label, i) => (
@@ -71,7 +81,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
               Coller un texte
             </button>
             <button type="button" role="tab" aria-selected={source === 'pdf'} className={source === 'pdf' ? 'is-selected' : ''} onClick={() => setSource('pdf')}>
-              Importer un PDF <small>bientôt</small>
+              Importer un PDF
             </button>
           </div>
 
@@ -92,13 +102,24 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
               </p>
             </>
           ) : (
-            <div className="ai-hero__dropzone">
-              <strong>Import de PDF en préparation</strong>
-              <span>Bientôt, déposez votre support de cours : l’IA retrouvera les passages utiles et citera les pages d’où viennent les questions.</span>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => setSource('text')}>
-                Coller un texte en attendant
-              </button>
-            </div>
+            <>
+              <DocumentLibrary selectedId={doc?.id ?? null} onSelect={selectDoc} />
+              {doc && (
+                <label className="ai-hero__topic">
+                  <span>
+                    Sujet ou chapitre <em>(facultatif)</em>
+                  </span>
+                  <input
+                    className="input"
+                    maxLength={200}
+                    placeholder="Ex. Chapitre 3 : les protocoles TCP et UDP"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                  />
+                  <small>Sans sujet, les questions couvrent tout le document.</small>
+                </label>
+              )}
+            </>
           )}
 
           <div className="ai-hero__options">
@@ -124,10 +145,10 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
             )}
           </div>
 
-          <button type="button" className="btn btn-accent ai-hero__generate" disabled={busy || tooShort || source !== 'text'} onClick={generate}>
+          <button type="button" className="btn btn-accent ai-hero__generate" disabled={busy || !canGenerate} onClick={generate}>
             {busy ? (
               <>
-                <Spinner /> L’IA lit votre cours…
+                <Spinner /> {source === 'pdf' ? 'L’IA parcourt votre document…' : 'L’IA lit votre cours…'}
               </>
             ) : (
               <>Générer les questions →</>
@@ -160,6 +181,17 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
                   ))}
                 </ul>
                 {q.explanation && <p className="muted small">Explication — {q.explanation}</p>}
+                {q.source && q.source.pages.length > 0 && (
+                  <details className="ai-source">
+                    <summary>
+                      <span className="ai-source__badge">
+                        {q.source.pages.length > 1 ? 'pages' : 'page'} {q.source.pages.join(', ')}
+                      </span>
+                      {q.source.documentName && <span className="ai-source__doc">{q.source.documentName}</span>}
+                    </summary>
+                    {q.source.excerpt && <blockquote>« {q.source.excerpt} »</blockquote>}
+                  </details>
+                )}
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => accept([q])}>
                   Ajouter
                 </button>

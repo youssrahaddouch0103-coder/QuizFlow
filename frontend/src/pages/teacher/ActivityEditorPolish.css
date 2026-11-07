@@ -10,7 +10,11 @@
 .activity-editor .editor-layout { grid-template-columns: minmax(0, 1fr); }
 .activity-editor .editor-section-heading > svg { display: none; }
 .activity-editor .editor-heading h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; }
-.activity-editor .editor-save-actions { gap: 10px; }
+.activity-editor .editor-save-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.activity-editor .editor-save-actions > .row { gap: 10px; flex-wrap: nowrap; }
+.activity-editor .editor-launch-hint { margin: 0; max-width: 300px; color: var(--muted); font-size: 0.8rem; text-align: right; }
+.activity-editor .editor-error-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.activity-editor .editor-error-link:hover { color: var(--text); }
 .activity-editor .editor-save-actions .btn-primary { box-shadow: 0 4px 12px rgba(27, 42, 74, 0.12); min-width: 145px; }
 .activity-editor .editor-intro { border-top: 1px solid var(--border); box-shadow: none; }
 .activity-editor .editor-intro .tabs { padding: 5px; border: 1px solid var(--border); background: var(--surface-2); }
@@ -41,9 +45,14 @@
 }
 @media (max-width: 600px) {
   .activity-editor .editor-heading { padding: 18px; }
-  .activity-editor .editor-save-actions { width: 100%; }
+  .activity-editor .editor-save-actions { width: 100%; align-items: stretch; }
+  .activity-editor .editor-save-actions > .row { width: 100%; }
+  .activity-editor .editor-launch-hint { max-width: none; text-align: left; }
   .activity-editor .editor-save-actions .btn { flex: 1; }
   .activity-editor .question-head .question-number { flex-basis: 100%; margin-bottom: 6px; }
   .activity-editor .question-head .spacer { display: none; }
   .activity-editor .question-head .select { flex: 1; min-width: 140px; }
 }
+/* Champ obligatoire manquant (ex. titre) */
+.activity-editor .input.is-invalid { border-color: var(--danger); background: var(--danger-soft); box-shadow: 0 0 0 3px #a3302a1f; }
+.activity-editor .editor-field-error { margin: 6px 0 0; color: var(--danger); font-size: 0.85rem; font-weight: 600; }

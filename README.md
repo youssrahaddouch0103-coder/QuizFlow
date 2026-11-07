@@ -2,7 +2,7 @@
 
 Plateforme d'interaction en temps réel pour la classe (dans l'esprit de Wooclap) : l'enseignant lance un quiz ou un
 sondage, les étudiants rejoignent avec un QR code depuis leur téléphone, et les résultats s'affichent en direct.
-Une IA aide l'enseignant à générer des questions à partir de son cours.
+Une IA aide l'enseignant à générer des questions à partir de son cours : texte collé ou PDF importé (RAG, avec la page source de chaque question).
 
 Projet d'initiation — ENSAM Meknès — Youssra Haddouch et Ikram Ech-Charqy.
 
@@ -12,13 +12,14 @@ Projet d'initiation — ENSAM Meknès — Youssra Haddouch et Ikram Ech-Charqy.
 Navigateur (React)  ──REST /api──►  Backend Spring Boot  ──►  PostgreSQL (sessions, participants, réponses, résultats)
         ▲                │                │            └──►  MongoDB (activités, questions, choix)
         └──WebSocket /ws─┘ (STOMP)        └──HTTP──►  Service IA Python (FastAPI) ──► LLM (Groq / Gemini)
+                                                                         └─► PostgreSQL + pgvector (PDF, embeddings e5)
 ```
 
 | Dossier | Contenu | Technologies |
 |---|---|---|
 | `backend/` | API REST, temps réel, règles métier | Java 21, Spring Boot 3, Spring Security (JWT), JPA + Flyway, MongoDB, STOMP |
 | `frontend/` | interface enseignant et écran étudiant | React 19, TypeScript, Vite, @stomp/stompjs, qrcode.react |
-| `ai-service/` | génération de questions par LLM | Python 3.12, FastAPI, httpx, pytest |
+| `ai-service/` | génération de questions par LLM, RAG sur les PDF | Python 3.12, FastAPI, pypdf, fastembed (multilingual-e5-small), pgvector, pytest |
 | `docs/` | contrat front/back, feuille de route IA | — |
 
 La conception (workflows W1 à W7, UML, MCD/MLD) correspond aux documents P1 et P2.
@@ -69,7 +70,8 @@ LLM_API_KEY=... .venv/bin/uvicorn app.main:app --reload --port 8000  # docs : ht
 ```bash
 cd backend && mvn verify            # règles W2, score et classement
 cd frontend && npm run lint && npm run build
-cd ai-service && python -m pytest -q
+cd ai-service && pip install -r requirements-dev.txt && python -m pytest -q
+# tests RAG avec la base : TEST_DATABASE_URL=postgresql://quizflow:quizflow@localhost:5432/quizflow
 ```
 
 La CI GitHub Actions (`.github/workflows/ci.yml`) lance ces trois commandes à chaque pull request.
@@ -88,7 +90,8 @@ La CI GitHub Actions (`.github/workflows/ci.yml`) lance ces trois commandes à c
 calculé, duplication, archivage, verrouillage après utilisation (R1) ; lancement d'une session avec code et QR code ;
 participation anonyme par pseudo avec reconnexion ; questions pilotées par l'enseignant ; réponses et statistiques en
 direct ; correction affichée à la fermeture ; clôture avec scores, classement et statistiques ; historique et export
-CSV ; fin automatique des sessions abandonnées (R7) ; génération de questions par IA avec relecture.
+CSV ; fin automatique des sessions abandonnées (R7) ; génération de questions par IA avec relecture ; bibliothèque de PDF
+et génération RAG avec page source et extrait justificatif.
 
-**Suite prévue** : voir [`docs/IA.md`](docs/IA.md) (RAG sur les PDF de cours, évaluation des modèles, analyse des
+**Suite prévue** : voir [`docs/IA.md`](docs/IA.md) (évaluation des modèles et du RAG, analyse des
 réponses libres) et les bonus : nuage de mots, bouton « je suis perdu », minuteur, test de charge à 50 participants.

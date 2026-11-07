@@ -41,10 +41,25 @@ jobs:
     defaults:
       run:
         working-directory: ai-service
+    # PostgreSQL + pgvector pour les tests du RAG (import de PDF).
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: quizflow
+          POSTGRES_USER: quizflow
+          POSTGRES_PASSWORD: quizflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quizflow -d quizflow"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://quizflow:quizflow@localhost:5432/quizflow
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
