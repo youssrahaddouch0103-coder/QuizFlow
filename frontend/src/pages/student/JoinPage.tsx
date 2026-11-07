@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { ApiError, errorMessage } from '../../api/client'
 import type { PublicSessionInfo } from '../../api/types'
 import { ErrorAlert, Logo, Spinner } from '../../components/ui'
 import { playerStore } from '../../lib/playerStore'
 import { typeLabel } from '../../lib/format'
-import QrScanner from './QrScanner'
+import './JoinPage.css'
+
+// Le lecteur de QR (jsQR) n'est chargé que si l'élève choisit de scanner.
+const QrScanner = lazy(() => import('./QrScanner'))
+const Hero3D = lazy(() => import('../Hero3D'))
 
 /** W4 : l'étudiant saisit le code (ou arrive par le QR code), puis choisit un pseudo. */
 export default function JoinPage() {
@@ -79,7 +83,16 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page join-page">
+      <div className="join-page__bg" aria-hidden="true">
+        <Suspense fallback={null}>
+          <Hero3D variant="full" />
+        </Suspense>
+        <span className="join-page__shade" />
+      </div>
+      <Link to="/" className="join-page__back">
+        ← Accueil
+      </Link>
       <div className="card auth-card stack">
         <div className="brand">
           <Logo size={36} /> QuizFlow
@@ -94,7 +107,9 @@ export default function JoinPage() {
         {!checking && !info && scanning && (
           <div className="stack">
             <h2 style={{ textAlign: 'center' }}>Scanner le QR code</h2>
-            <QrScanner onCode={onScanned} onClose={closeScanner} />
+            <Suspense fallback={<div className="player-center" style={{ padding: 20 }}><Spinner /></div>}>
+              <QrScanner onCode={onScanned} onClose={closeScanner} />
+            </Suspense>
           </div>
         )}
 
