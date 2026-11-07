@@ -106,7 +106,7 @@ export function RegisterPage() {
         </div>
         <AuthField icon="user">
           <label htmlFor="name">Nom affiché</label>
-          <input id="name" className="input" required maxLength={100} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Pr. Alaoui" />
+          <input id="name" className="input" required maxLength={100} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Pr. Zemmouri" />
         </AuthField>
         <AuthField icon="email">
           <label htmlFor="email">Email</label>

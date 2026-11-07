@@ -34,10 +34,13 @@ type Layout = {
   cubes: [number, number, number, number][]
   beads: [number, number, number, number, number][]
   narrowZ: number
+  cameraZ?: number
 }
 
 /** Placement des objets : « hero » pour la page d'accueil, « panel » pour le panneau de connexion. */
-const LAYOUTS: Record<'hero' | 'panel' | 'full', Layout> = {
+type Variant = 'hero' | 'panel' | 'full' | 'presenter'
+
+const LAYOUTS: Record<Variant, Layout> = {
   hero: {
     lookAt: [1.5, 0, 0],
     q: [8.4, 3.2, -3],
@@ -94,12 +97,46 @@ const LAYOUTS: Record<'hero' | 'panel' | 'full', Layout> = {
     ],
     narrowZ: 19,
   },
+  // Écran projeté : objets dans les coins et sur les bords, le centre reste libre pour la question.
+  presenter: {
+    lookAt: [0, 0, 0],
+    q: [12.6, 5.6, -6],
+    cubes: [
+      [-11.6, 5.2, -4, 0.9],
+      [11.8, -5.0, -3, 1],
+      [-11.8, -5.0, -3, 0.9],
+      [-3.2, -7.2, -6, 0.7],
+    ],
+    beads: [
+      [-6.0, 6.4, -6, 0.25, 0],
+      [6.5, 6.6, -7, 0.3, 2],
+      [-13.0, 0.4, -6, 0.35, 1],
+      [13.2, 0.6, -6, 0.3, 0],
+      [5.2, -7.0, -5, 0.28, 2],
+    ],
+    narrowZ: 22,
+    cameraZ: 16,
+  },
 }
 
 type Floater = { obj: THREE.Object3D; base: THREE.Vector3; orig: THREE.Vector3; speed: number; phase: number; spin: THREE.Vector3; amp: number }
 
-export default function Hero3D({ variant = 'hero' }: { variant?: 'hero' | 'panel' | 'full' }) {
+/**
+ * pulse : un nombre qui change à chaque événement (réponse reçue, participant arrivé) ;
+ * les objets accélèrent et sautillent un instant, puis reviennent au calme.
+ */
+export default function Hero3D({ variant = 'hero', pulse = 0 }: { variant?: Variant; pulse?: number }) {
   const hostRef = useRef<HTMLDivElement>(null)
+  const boostRef = useRef(0)
+  const firstPulse = useRef(true)
+
+  useEffect(() => {
+    if (firstPulse.current) {
+      firstPulse.current = false
+      return
+    }
+    boostRef.current = 1
+  }, [pulse])
 
   useEffect(() => {
     const host = hostRef.current
@@ -118,6 +155,7 @@ export default function Hero3D({ variant = 'hero' }: { variant?: 'hero' | 'panel
     host.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
+    // Brouillard couleur bleu marine : les objets lointains se fondent dans le fond.
     const fog = new THREE.Fog('#1b2a4a', 9, 22)
     scene.fog = fog
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100)
@@ -201,10 +239,10 @@ export default function Hero3D({ variant = 'hero' }: { variant?: 'hero' | 'panel
       renderer.setSize(w, h, false)
       camera.aspect = w / h
       // Sur écran étroit on recule la caméra pour garder le Q visible.
-      camera.position.z = w < 700 ? L.narrowZ : 12
+      camera.position.z = w < 700 ? L.narrowZ : (L.cameraZ ?? 12)
       // Le brouillard suit la distance de la caméra, pour que les objets restent visibles.
       fog.near = camera.position.z - 3
-      fog.far = camera.position.z + 10
+      fog.far = camera.position.z + (variant === 'presenter' ? 18 : 10)
       // Écran en hauteur (téléphone) : on rapproche les objets au-dessus et au-dessous de la carte.
       const portrait = variant === 'full' && w / h < 0.8
       for (const f of floaters) f.base.set(portrait ? f.orig.x * 0.42 : f.orig.x, portrait ? f.orig.y * 1.55 : f.orig.y, f.orig.z)
@@ -230,12 +268,15 @@ export default function Hero3D({ variant = 'hero' }: { variant?: 'hero' | 'panel
 
     const render = () => {
       const t = clock.getElapsedTime()
+      const boost = boostRef.current
+      boostRef.current *= 0.95 // l'élan retombe en une seconde environ
+      const spin = 0.01 * (1 + boost * 14)
       for (const f of floaters) {
-        f.obj.position.y = f.base.y + Math.sin(t * f.speed + f.phase) * f.amp
+        f.obj.position.y = f.base.y + Math.sin(t * f.speed + f.phase) * f.amp + Math.sin(t * 9 + f.phase) * boost * 0.35
         f.obj.position.x = f.base.x + Math.cos(t * f.speed * 0.7 + f.phase) * f.amp * 0.5
-        f.obj.rotation.x += f.spin.x * 0.01
-        f.obj.rotation.y += f.spin.y * 0.01
-        f.obj.rotation.z += f.spin.z * 0.01
+        f.obj.rotation.x += f.spin.x * spin
+        f.obj.rotation.y += f.spin.y * spin
+        f.obj.rotation.z += f.spin.z * spin
       }
       camera.position.x += (pointer.x * 0.9 - camera.position.x) * 0.04
       camera.position.y += (-pointer.y * 0.6 - camera.position.y) * 0.04

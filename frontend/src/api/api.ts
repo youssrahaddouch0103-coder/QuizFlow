@@ -7,6 +7,8 @@ import type {
   AiGenerateRequest,
   AiGenerateResponse,
   AuthResponse,
+  CourseDocument,
+  DocumentGenerateRequest,
   JoinResponse,
   PlayerState,
   PublicSessionInfo,
@@ -44,14 +46,27 @@ export const api = {
   // IA
   generateQuestions: (body: AiGenerateRequest) => request<AiGenerateResponse>('/api/ai/questions', { method: 'POST', body }),
 
+  // Bibliothèque de PDF (RAG)
+  listDocuments: () => request<CourseDocument[]>('/api/documents'),
+  uploadDocument: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<CourseDocument>('/api/documents', { method: 'POST', body: form })
+  },
+  deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
+  generateFromDocument: (id: string, body: DocumentGenerateRequest) =>
+    request<AiGenerateResponse>(`/api/documents/${id}/questions`, { method: 'POST', body }),
+
   // Sessions (enseignant)
   listSessions: (scope?: 'active' | 'finished') =>
     request<SessionSummary[]>('/api/sessions' + (scope ? `?scope=${scope}` : '')),
   launchSession: (activityId: string) => request<TeacherSessionView>('/api/sessions', { method: 'POST', body: { activityId } }),
   getSession: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}`),
-  startSession: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}/start`, { method: 'POST' }),
+  startSession: (id: string, durationSeconds?: number) =>
+    request<TeacherSessionView>(`/api/sessions/${id}/start`, { method: 'POST', body: durationSeconds ? { durationSeconds } : undefined }),
   closeQuestion: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}/questions/close`, { method: 'POST' }),
-  nextQuestion: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}/questions/next`, { method: 'POST' }),
+  nextQuestion: (id: string, durationSeconds?: number) =>
+    request<TeacherSessionView>(`/api/sessions/${id}/questions/next`, { method: 'POST', body: durationSeconds ? { durationSeconds } : undefined }),
   endSession: (id: string) => request<ResultsView>(`/api/sessions/${id}/end`, { method: 'POST' }),
   cancelSession: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}/cancel`, { method: 'POST' }),
   sessionResults: (id: string) => request<ResultsView>(`/api/sessions/${id}/results`),

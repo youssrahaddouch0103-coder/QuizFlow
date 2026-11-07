@@ -570,7 +570,115 @@ p {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--primary);
+}
+
+/* Fond 3D bleu marine (écran projeté et téléphones), avec un voile au centre pour la lisibilité. */
+.presenter-bg,
+.player-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.presenter-bg__veil,
+.player-bg__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 66% at 50% 50%, #1b2a4af0 0%, #1b2a4acc 55%, #1b2a4a00 100%);
+}
+.presenter > :not(.presenter-bg),
+.player > :not(.player-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Textes posés directement sur le fond bleu : en clair. Les cartes blanches gardent leur texte foncé. */
+.presenter-body,
+.player-body {
+  color: #fff;
+}
+.presenter-body .muted,
+.player-body .muted,
+.presenter-body .counter small,
+.presenter-body .bar-value small,
+.presenter-body .join-url {
+  color: var(--on-dark-muted);
+}
+.presenter-body .join-url strong {
+  color: #fff;
+}
+.presenter-body .big-code {
+  color: #c9e2a3;
+}
+.presenter-body .progress {
+  background: #ffffff26;
+}
+.presenter-body .progress > div {
+  background: var(--accent);
+}
+.presenter-body :is(.bar-track, .qr-box, .participant-chip, .podium-row, .kpi, .card, .alert, .table),
+.player-body :is(.answer-btn, .card, .alert) {
+  color: var(--text);
+}
+.presenter-body .kpi .label {
+  color: var(--muted);
+}
+.presenter-body .badge,
+.player-body .badge {
+  background: #ffffff1f;
+  color: #fff;
+}
+.presenter-body .badge-primary,
+.player-body .badge-primary {
+  background: var(--accent);
+  color: var(--primary);
+}
+.presenter-body .bar-track .badge-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.presenter .presenter-end {
+  color: var(--danger);
+}
+
+/* Réglages du minuteur (barre du bas de l'écran projeté) */
+.timer-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.timer-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer-settings .select {
+  width: auto;
+}
+.timer-settings__auto {
+  cursor: pointer;
+}
+.timer-settings__auto.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.auto-next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.player-question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .presenter-bar {
@@ -829,7 +937,7 @@ p {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--primary);
 }
 
 .player-top {

@@ -68,6 +68,10 @@ export interface QuestionLive {
   text: string
   choiceMode: ChoiceMode
   choices: ChoiceLive[]
+  /** Minuteur choisi par l'enseignant (absent = sans minuteur) */
+  durationSeconds?: number
+  /** Temps restant au moment de l'envoi par le serveur */
+  remainingMs?: number
 }
 
 export interface ClosedInfo {
@@ -192,16 +196,52 @@ export interface AiGenerateRequest {
   difficulty?: string
 }
 
+/** Origine d'une question générée depuis un PDF : pages et extrait du cours. */
+export interface AiQuestionSource {
+  documentId?: string
+  documentName?: string
+  pages: number[]
+  excerpt?: string
+  score?: number
+}
+
 export interface AiGeneratedQuestion {
   text: string
   choiceMode: ChoiceMode
   choices: { label: string; correct: boolean }[]
   explanation?: string
+  source?: AiQuestionSource
 }
 
 export interface AiGenerateResponse {
   questions: AiGeneratedQuestion[]
   model: string
+}
+
+// ---------- Bibliothèque de documents (RAG) ----------
+
+export type DocumentStatus = 'PROCESSING' | 'READY' | 'FAILED'
+
+export interface CourseDocument {
+  id: string
+  filename: string
+  title?: string
+  sizeBytes: number
+  pages: number
+  chunks: number
+  status: DocumentStatus
+  /** 0 à 100 pendant l'analyse */
+  progress?: number
+  error?: string
+  createdAt: string
+}
+
+export interface DocumentGenerateRequest {
+  topic?: string
+  type: ActivityType
+  count: number
+  language?: string
+  difficulty?: string
 }
 
 // ---------- Temps réel ----------

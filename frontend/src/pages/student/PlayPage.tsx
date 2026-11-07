@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { ApiError, errorMessage } from '../../api/client'
@@ -7,6 +7,11 @@ import { ChoiceLetter, ConnectionIndicator, ErrorAlert, Spinner } from '../../co
 import { percent } from '../../lib/format'
 import { playerStore } from '../../lib/playerStore'
 import { useSessionChannel } from '../../realtime/useSessionChannel'
+import { CountdownRing } from '../../components/Timers'
+import { useCountdown } from '../../components/useCountdown'
+
+// Même fond 3D que la page d'accueil, chargé à part.
+const Hero3D = lazy(() => import('../Hero3D'))
 
 /** Écran de l'étudiant pendant la session (mobile d'abord). */
 export default function PlayPage() {
@@ -59,6 +64,7 @@ export default function PlayPage() {
 
   const finished = state?.state === 'TERMINEE' || state?.state === 'ANNULEE'
   const status = useSessionChannel({ code: finished ? undefined : code, onEvent, onConnected: reload })
+  const secondsLeft = useCountdown(state?.question, state?.state === 'QUESTION_OUVERTE')
 
   if (!identity) return <Navigate to={`/join/${code}`} replace />
 
@@ -85,6 +91,12 @@ export default function PlayPage() {
 
   return (
     <div className="player">
+      <div className="player-bg" aria-hidden="true">
+        <Suspense fallback={null}>
+          <Hero3D variant="full" />
+        </Suspense>
+        <span className="player-bg__veil" />
+      </div>
       <div className="player-top">
         <span>👤 {identity.pseudo}</span>
         <span className="muted small">{state?.title}</span>
@@ -97,7 +109,9 @@ export default function PlayPage() {
             <Spinner />
           </div>
         )}
-        {state && <PlayerContent state={state} selected={selected} sending={sending} onToggle={toggle} onSubmit={submit} />}
+        {state && (
+          <PlayerContent state={state} selected={selected} sending={sending} secondsLeft={secondsLeft} onToggle={toggle} onSubmit={submit} />
+        )}
       </div>
     </div>
   )
@@ -107,12 +121,15 @@ interface ContentProps {
   state: PlayerState
   selected: string[]
   sending: boolean
+  secondsLeft: number | null
   onToggle: (id: string) => void
   onSubmit: () => void
 }
 
-function PlayerContent({ state, selected, sending, onToggle, onSubmit }: ContentProps) {
+function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubmit }: ContentProps) {
   const q = state.question
+  const timeUp = secondsLeft === 0
+  const ring = secondsLeft !== null && q?.durationSeconds ? <CountdownRing seconds={secondsLeft} total={q.durationSeconds} size={56} /> : null
 
   if (state.state === 'EN_ATTENTE') {
     return (
@@ -128,21 +145,24 @@ function PlayerContent({ state, selected, sending, onToggle, onSubmit }: Content
   if (state.state === 'QUESTION_OUVERTE' && q && !state.answered) {
     return (
       <>
-        <span className="badge badge-primary" style={{ alignSelf: 'flex-start' }}>
-          Question {q.index + 1} / {q.total}
-          {q.choiceMode === 'MULTIPLE' ? ' · plusieurs réponses' : ''}
-        </span>
+        <div className="player-question-head">
+          <span className="badge badge-primary">
+            Question {q.index + 1} / {q.total}
+            {q.choiceMode === 'MULTIPLE' ? ' · plusieurs réponses' : ''}
+          </span>
+          {ring}
+        </div>
         <div className="player-question">{q.text}</div>
         <div className="stack" style={{ gap: 10 }}>
           {q.choices.map((c, i) => (
-            <button key={c.id} className={`answer-btn ${selected.includes(c.id) ? 'selected' : ''}`} onClick={() => onToggle(c.id)}>
+            <button key={c.id} className={`answer-btn ${selected.includes(c.id) ? 'selected' : ''}`} disabled={timeUp} onClick={() => onToggle(c.id)}>
               <ChoiceLetter index={i} />
               {c.label}
             </button>
           ))}
         </div>
-        <button className="btn btn-primary btn-lg btn-block" disabled={sending || selected.length === 0} onClick={onSubmit}>
-          {sending ? 'Envoi…' : 'Valider ma réponse'}
+        <button className="btn btn-accent btn-lg btn-block" disabled={sending || selected.length === 0 || timeUp} onClick={onSubmit}>
+          {timeUp ? 'Temps écoulé' : sending ? 'Envoi…' : 'Valider ma réponse'}
         </button>
       </>
     )
@@ -153,6 +173,7 @@ function PlayerContent({ state, selected, sending, onToggle, onSubmit }: Content
       <div className="player-center">
         <div className="big-emoji">✅</div>
         <h2>Réponse envoyée</h2>
+        {ring}
         <p className="muted">Attendez que l’enseignant ferme la question.</p>
       </div>
     )
