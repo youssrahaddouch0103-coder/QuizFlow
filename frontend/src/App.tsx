@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TeacherLayout from './components/TeacherLayout'
+import LandingPage from './pages/LandingPage'
 import JoinPage from './pages/student/JoinPage'
 import PlayPage from './pages/student/PlayPage'
 import ActivityEditorPage from './pages/teacher/ActivityEditorPage'
@@ -21,6 +22,9 @@ function RequireTeacher({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
+      {/* Page d'accueil publique */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Étudiants (sans compte) */}
       <Route path="/join" element={<JoinPage />} />
       <Route path="/join/:code" element={<JoinPage />} />
@@ -46,7 +50,7 @@ export default function App() {
         <Route path="/sessions/:id/results" element={<ResultsPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

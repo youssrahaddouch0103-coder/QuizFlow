@@ -55,6 +55,34 @@ function connect(code, token) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** Petit PDF valide (une page par texte, police Helvetica) pour tester l'import RAG sans fichier externe. */
+function makePdf(pages) {
+  const objects = []
+  const add = (body) => objects.push(body) // numéro d'objet = position + 1
+  add('<< /Type /Catalog /Pages 2 0 R >>')
+  add('') // arbre des pages, rempli plus bas
+  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+  const kids = []
+  for (const text of pages) {
+    const lines = text.match(/.{1,80}(\s|$)/g) ?? [text]
+    const stream = ['BT /F1 12 Tf 40 800 Td 16 TL', ...lines.map((l) => `(${l.trim().replace(/[()\\]/g, '')}) '`), 'ET'].join('\n')
+    add(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`)
+    add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${objects.length} 0 R >>`)
+    kids.push(`${objects.length} 0 R`)
+  }
+  objects[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${kids.length} >>`
+  let pdf = '%PDF-1.4\n'
+  const offsets = objects.map((body, i) => {
+    const at = pdf.length
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`
+    return at
+  })
+  const xref = pdf.length
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => String(o).padStart(10, '0') + ' 00000 n \n').join('')}`
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+  return Buffer.from(pdf, 'latin1')
+}
+
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
 async function loginExisting() {
@@ -188,6 +216,37 @@ async function main() {
     body: { text: 'Le pattern Composite compose des objets en arbre. Le pattern Proxy contrôle l’accès à un objet réel.', type: 'QUIZ', count: 2 },
   })
   ok(ai.status === 200 && ai.data.questions.length > 0, `génération IA (${ai.status}, modèle ${ai.data?.model ?? '?'})`)
+
+  // 9. RAG : import d'un PDF, analyse (embeddings + pgvector), génération avec pages citées, suppression
+  const pdf = makePdf([
+    'Chapitre 1. Le pattern Composite compose des objets en structure d arbre. Un client traite de la meme facon un objet simple et un groupe d objets.',
+    'Chapitre 2. Le pattern Proxy controle l acces a un objet reel. Il peut retarder une creation couteuse ou verifier les droits avant de transmettre l appel.',
+    'Chapitre 3. Le pattern Observer previent automatiquement les abonnes quand l etat d un sujet change. Il est utilise dans les interfaces graphiques.',
+  ])
+  const form = new FormData()
+  form.append('file', new Blob([pdf], { type: 'application/pdf' }), 'smoke-patterns.pdf')
+  const upRes = await fetch(BASE + '/api/documents', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
+  const up = await upRes.json().catch(() => ({}))
+  ok(upRes.status === 202 && !!up.id, `import d’un PDF (${upRes.status}${up.message ? ' : ' + up.message : ''})`)
+  if (up.id) {
+    let doc = null
+    // Le premier import peut charger le modèle d'embeddings : on laisse jusqu'à 60 s.
+    for (let i = 0; i < 60; i++) {
+      const list = await call('GET', '/api/documents', { token })
+      doc = list.data?.find?.((d) => d.id === up.id) ?? null
+      if (doc && doc.status !== 'PROCESSING') break
+      await wait(1000)
+    }
+    ok(doc?.status === 'READY' && doc.pages === 3, `PDF analysé (${doc?.status ?? '?'}, ${doc?.pages ?? 0} pages, ${doc?.chunks ?? 0} passages${doc?.error ? ' : ' + doc.error : ''})`)
+    const fromDoc = await call('POST', `/api/documents/${up.id}/questions`, { token, body: { topic: 'pattern Proxy', type: 'QUIZ', count: 2 } })
+    const pages = fromDoc.data?.questions?.map((q) => q.source?.pages?.join(',') ?? '?') ?? []
+    ok(
+      fromDoc.status === 200 && fromDoc.data.questions.length > 0 && fromDoc.data.questions.every((q) => q.source?.pages?.length > 0),
+      `génération depuis le PDF avec pages citées (${fromDoc.status}, pages ${pages.join(' / ')})`,
+    )
+    const del = await call('DELETE', `/api/documents/${up.id}`, { token })
+    ok(del.status === 204, 'suppression du document')
+  }
 
   for (const c of [teacherWs.client, ...players.map((p) => p.ws.client)]) await c.deactivate()
   console.log(failures === 0 ? '\nTout est OK ✅' : `\n${failures} vérification(s) en échec ❌`)

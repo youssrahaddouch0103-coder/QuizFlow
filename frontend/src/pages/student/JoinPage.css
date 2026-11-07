@@ -1,0 +1,26 @@
+/* Page « Rejoindre une session » : fond 3D marine, carte blanche au centre */
+.auth-page.join-page { position: relative; overflow: hidden; isolation: isolate; background: var(--primary); }
+.join-page__bg { position: absolute; inset: 0; z-index: -1; }
+.join-page__shade { position: absolute; inset: 0; background: radial-gradient(ellipse 520px 460px at 50% 50%, #1b2a4acc, #1b2a4a00 75%), radial-gradient(600px circle at 85% 12%, #b5d38a2b, #b5d38a00 70%); }
+.join-page .auth-card { position: relative; box-shadow: 0 30px 70px -30px #05090f; animation: join-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes join-in { from { opacity: 0; transform: translateY(18px) scale(0.98); } }
+.join-page__back { position: absolute; top: 18px; left: 20px; color: var(--on-dark-muted); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.join-page__back:hover { color: #fff; }
+
+.join-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.join-or::before,
+.join-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.join-scan-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.join-scan-btn svg { width: 22px; height: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .join-page .auth-card { animation: none; }
+}

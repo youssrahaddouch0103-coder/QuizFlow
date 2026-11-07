@@ -54,6 +54,13 @@ public class Session {
     @Column(name = "last_action_at", nullable = false)
     private Instant lastActionAt;
 
+    /** Minuteur de la question en cours (null = pas de minuteur, l'enseignant ferme à la main). */
+    @Column(name = "question_duration_seconds")
+    private Integer questionDurationSeconds;
+
+    @Column(name = "question_deadline")
+    private Instant questionDeadline;
+
     protected Session() {
     }
 
@@ -71,25 +78,30 @@ public class Session {
         this.lastActionAt = this.createdAt;
     }
 
-    /** Ouvre la question d'indice donné (0 = première). */
-    public void openQuestion(int index, String questionId) {
+    /** Ouvre la question d'indice donné (0 = première), avec un minuteur facultatif (en secondes). */
+    public void openQuestion(int index, String questionId, Integer durationSeconds) {
+        Instant now = Instant.now();
         if (startedAt == null) {
-            startedAt = Instant.now();
+            startedAt = now;
         }
         this.currentQuestionIndex = index;
         this.currentQuestionId = questionId;
         this.state = SessionState.QUESTION_OUVERTE;
+        this.questionDurationSeconds = durationSeconds;
+        this.questionDeadline = durationSeconds == null ? null : now.plusSeconds(durationSeconds);
         touch();
     }
 
     public void closeQuestion() {
         this.state = SessionState.QUESTION_FERMEE;
+        this.questionDeadline = null;
         touch();
     }
 
     public void end() {
         this.state = SessionState.TERMINEE;
         this.endedAt = Instant.now();
+        this.questionDeadline = null;
         touch();
     }
 
@@ -117,4 +129,6 @@ public class Session {
     public Instant getStartedAt() { return startedAt; }
     public Instant getEndedAt() { return endedAt; }
     public Instant getLastActionAt() { return lastActionAt; }
+    public Integer getQuestionDurationSeconds() { return questionDurationSeconds; }
+    public Instant getQuestionDeadline() { return questionDeadline; }
 }

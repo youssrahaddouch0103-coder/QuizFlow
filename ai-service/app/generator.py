@@ -7,6 +7,7 @@ et on relance si nécessaire.
 
 import logging
 import re
+from typing import Callable
 
 from .llm import LlmClient, LlmError
 from .prompts import SYSTEM_PROMPT, build_user_prompt
@@ -17,6 +18,7 @@ from .schemas import (
     GeneratedQuestion,
     GenerateRequest,
     GenerateResponse,
+    QuestionSource,
 )
 
 log = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ def clean_question(raw: object, activity_type: ActivityType) -> GeneratedQuestio
     """Transforme un élément brut renvoyé par le LLM en question valide, ou None s'il est inutilisable."""
     if not isinstance(raw, dict):
         return None
-    text = str(raw.get("text") or raw.get("question") or "").strip()
+    text = _strip_page_reference(str(raw.get("text") or raw.get("question") or "").strip())
     if not text or len(text) > MAX_TEXT:
         return None
 
@@ -41,9 +43,9 @@ def clean_question(raw: object, activity_type: ActivityType) -> GeneratedQuestio
     seen: set[str] = set()
     for c in raw.get("choices") or []:
         if isinstance(c, str):
-            label, correct = c.strip(), False
+            label, correct = _strip_page_reference(c.strip()), False
         elif isinstance(c, dict):
-            label = str(c.get("label") or c.get("text") or "").strip()
+            label = _strip_page_reference(str(c.get("label") or c.get("text") or "").strip())
             correct = bool(c.get("correct", False))
         else:
             continue
@@ -70,10 +72,44 @@ def clean_question(raw: object, activity_type: ActivityType) -> GeneratedQuestio
         choiceMode=mode,
         choices=choices,
         explanation=str(explanation).strip() if explanation else None,
+        source=_clean_pages(raw.get("pages")),
     )
 
 
-def generate_questions(req: GenerateRequest, llm: LlmClient, max_attempts: int = 2) -> GenerateResponse:
+_PAGE_REF = re.compile(
+    r"^(selon|d['’]après|d'apres|dans|en vous basant sur|sur la base de)\s+(le document|le cours|l['’]extrait|la|les)?\s*"
+    r"(pages?|p\.)?\s*[\d\s,\-–àet]*\s*(du document|du cours)?\s*,\s*",
+    re.IGNORECASE,
+)
+
+
+_PAGE_PAREN = re.compile(r"\s*\((?:voir\s+)?(?:pages?|p\.)\s*[\d\s,\-–àet]+\)", re.IGNORECASE)
+
+
+def _strip_page_reference(text: str) -> str:
+    """Filet de sécurité (les élèves n'ont pas le PDF) : retire « Selon les pages 2-3, » en début de
+    question et les mentions entre parenthèses comme « (pages 58-60) » ou « (p. 4) »."""
+    cleaned = _PAGE_PAREN.sub("", text).strip()
+    cleaned = _PAGE_REF.sub("", cleaned, count=1)
+    if cleaned != text and cleaned:
+        cleaned = cleaned[0].upper() + cleaned[1:]
+    return cleaned or text
+
+
+def _clean_pages(raw: object) -> QuestionSource | None:
+    """Pages citées par le LLM (mode document) : on ne garde que des entiers plausibles."""
+    if not isinstance(raw, list):
+        return None
+    pages = sorted({int(p) for p in raw if isinstance(p, (int, float, str)) and str(p).strip().isdigit() and 0 < int(p) < 10000})
+    return QuestionSource(pages=pages) if pages else None
+
+
+def generate_questions(
+    req: GenerateRequest,
+    llm: LlmClient,
+    max_attempts: int = 2,
+    build_prompt: Callable[[GenerateRequest], str] = build_user_prompt,
+) -> GenerateResponse:
     questions: list[GeneratedQuestion] = []
     seen_texts: set[str] = set()
     last_error: Exception | None = None
@@ -84,7 +120,7 @@ def generate_questions(req: GenerateRequest, llm: LlmClient, max_attempts: int =
             break
         sub_req = req.model_copy(update={"count": missing})
         try:
-            data = llm.complete_json(SYSTEM_PROMPT, build_user_prompt(sub_req))
+            data = llm.complete_json(SYSTEM_PROMPT, build_prompt(sub_req))
         except LlmError as e:
             log.warning("Tentative %s : %s", attempt, e)
             last_error = e
@@ -114,6 +150,7 @@ class MockLlm:
     def complete_json(self, system: str, user: str) -> dict:
         match = re.search(r"<cours>\n(.*)\n</cours>", user, re.S)
         text = match.group(1) if match else user
+        text = re.sub(r"</?extrait[^>]*>", " ", text)  # mode document : on retire les balises de pages
         count_match = re.search(r"exactement (\d+)", user)
         count = int(count_match.group(1)) if count_match else 3
         is_poll = "sondage" in user.split("\n", 1)[0]

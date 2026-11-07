@@ -8,6 +8,7 @@ import { ErrorAlert, PageLoader, StateBadge } from '../../components/ui'
 import ActivityCard from './ActivityCard'
 import ActivitySymbol from '../../components/ActivitySymbol'
 import DashboardEmptyState from './DashboardEmptyState'
+import QuizShowcase from './QuizShowcase'
 import './DashboardPage.css'
 
 type Filter = 'ALL' | ActivityStatus
@@ -115,10 +116,14 @@ export default function DashboardPage() {
   return (
     <div className="stack dashboard-page">
       <header className="card dashboard-heading">
-        <div>
-          {teacher?.displayName.trim() && <p className="dashboard-greeting">Bonjour {teacher.displayName.trim()}</p>}
-          <h1>Mes activités</h1>
-          <p>Retrouvez vos activités ou choisissez ce que vous voulez créer.</p>
+        <div className="dashboard-hero-top">
+          <div className="dashboard-hero-text">
+            {teacher?.displayName.trim() && <p className="dashboard-greeting">Bonjour {teacher.displayName.trim()}</p>}
+            <h1>Mes activités</h1>
+            <p>Retrouvez vos activités ou choisissez ce que vous voulez créer.</p>
+            <p className="dashboard-hero-hint">Vos élèves répondent depuis leur téléphone, les résultats s’affichent en direct.</p>
+          </div>
+          <QuizShowcase />
         </div>
         <div className="dashboard-create">
           <Link to="/activities/new?type=QUIZ" className="dashboard-create-link">

@@ -24,6 +24,11 @@ class Settings:
     model: str
     timeout_seconds: float
     max_attempts: int
+    # RAG : base PostgreSQL + pgvector. Vide = import de PDF désactivé (la génération par texte reste dispo).
+    database_url: str = ""
+    # Secret partagé avec le backend : seuls les appels portant ce jeton sont acceptés (vide = pas de contrôle).
+    internal_token: str = ""
+    max_upload_mb: int = 20
 
     @property
     def is_mock(self) -> bool:
@@ -44,4 +49,7 @@ def load_settings() -> Settings:
         model=os.getenv("LLM_MODEL") or defaults["model"],
         timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "60")),
         max_attempts=int(os.getenv("LLM_MAX_ATTEMPTS", "2")),
+        database_url=os.getenv("DATABASE_URL", "").strip(),
+        internal_token=os.getenv("AI_INTERNAL_TOKEN", "").strip(),
+        max_upload_mb=int(os.getenv("MAX_UPLOAD_MB", "20")),
     )

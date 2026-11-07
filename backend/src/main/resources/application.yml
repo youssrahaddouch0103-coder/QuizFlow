@@ -18,6 +18,11 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # Import de PDF pour le RAG (le service IA applique la même limite).
+      max-file-size: 20MB
+      max-request-size: 21MB
   data:
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/quizflow}
@@ -43,6 +48,7 @@ app:
   ai:
     url: ${AI_SERVICE_URL:http://localhost:8000}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:90}
+    internal-token: ${AI_INTERNAL_TOKEN:}
 
 management:
   endpoints:

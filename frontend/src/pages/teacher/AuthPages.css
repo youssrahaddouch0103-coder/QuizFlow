@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   padding: clamp(16px, 4vw, 56px);
-  background: radial-gradient(ellipse at 10% 15%, #e4ecff, transparent 55%), radial-gradient(ellipse at 90% 90%, #eae4ff, transparent 60%), #f6f7fc;
+  background: var(--bg);
 }
 
 .qf-auth .qf-auth__shell {
@@ -16,7 +16,7 @@
   border: 1px solid #fff;
   border-radius: 28px;
   background: #fff;
-  box-shadow: 0 24px 80px -30px #37307640, 0 4px 16px #37307608;
+  box-shadow: 0 24px 80px -30px #1b2a4a40, 0 4px 16px #1b2a4a08;
 }
 
 .qf-auth .qf-auth__story {
@@ -27,52 +27,64 @@
   gap: 36px;
   padding: 44px;
   color: #fff;
-  background: radial-gradient(ellipse at 0 0, #4385e8, transparent 65%), radial-gradient(ellipse at 100% 100%, #8651df, transparent 65%), #443ac1;
+  background: var(--primary);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Fond 3D du panneau + voile pour garder le texte lisible */
+.qf-auth .qf-auth__bg { position: absolute; inset: 0; z-index: -1; }
+.qf-auth .qf-auth__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(420px circle at 85% 8%, #b5d38a2e, #b5d38a00 70%),
+    linear-gradient(100deg, #1b2a4af2 0%, #1b2a4acc 45%, #1b2a4a33 100%);
 }
 
 .qf-auth .qf-auth__eyebrow,
 .qf-auth .qf-auth__welcome { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; }
 .qf-auth .qf-auth__headline { font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.12; font-weight: 800; letter-spacing: -0.045em; margin-bottom: 22px; }
-.qf-auth .qf-auth__headline span { color: #ccecff; }
-.qf-auth .qf-auth__story-copy > p:last-child { max-width: 330px; font-size: 0.95rem; line-height: 1.75; color: #eef1ff; }
-.qf-auth .qf-auth__illustration { padding: 22px; border-radius: 18px; background: #ffffff12; border: 1px solid #ffffff45; box-shadow: 0 12px 32px #21166420; transform: rotate(-2deg); }
+.qf-auth .qf-auth__headline span { color: var(--accent); }
+.qf-auth .qf-auth__story-copy > p:last-child { max-width: 330px; font-size: 0.95rem; line-height: 1.75; color: var(--on-dark-muted); }
+.qf-auth .qf-auth__illustration { padding: 22px; border-radius: 18px; background: #ffffff14; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #ffffff45; box-shadow: 0 12px 32px #0d162a30; transform: rotate(-2deg); }
 .qf-auth .qf-auth__quiz-top, .qf-auth .qf-auth__quiz-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; }
 .qf-auth .qf-auth__illustration > p { font-size: 1rem; font-weight: 700; margin: 20px 0 16px; }
 .qf-auth .qf-auth__answer { display: flex; align-items: center; gap: 10px; padding: 11px; margin-top: 8px; border: 1px solid #ffffff40; border-radius: 9px; font-size: 0.72rem; }
 .qf-auth .qf-auth__answer > span { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 6px; background: #ffffff20; }
-.qf-auth .qf-auth__answer--selected { background: #fff; color: #393280; border-color: #fff; }
-.qf-auth .qf-auth__answer--selected > span { background: #eeeaff; }
+.qf-auth .qf-auth__answer--selected { background: #fff; color: var(--primary); border-color: #fff; }
+.qf-auth .qf-auth__answer--selected > span { background: var(--accent-soft); }
 .qf-auth .qf-auth__answer b { margin-left: auto; }
 .qf-auth .qf-auth__quiz-bottom { margin-top: 20px; }
-.qf-auth .qf-auth__signature { font-size: 0.75rem; color: #eef1ff; }
+.qf-auth .qf-auth__signature { font-size: 0.75rem; color: var(--on-dark-muted); }
 
 .qf-auth .qf-auth__content { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 44px clamp(24px, 4vw, 60px); }
-.qf-auth .qf-auth__welcome { color: #646080; text-align: center; margin-bottom: 30px; }
+.qf-auth .qf-auth__welcome { color: var(--muted); text-align: center; margin-bottom: 30px; }
 .qf-auth .qf-auth__form { max-width: 400px; align-self: center; padding: 0; border: 0; border-radius: 0; box-shadow: none; gap: 20px; }
 .qf-auth .qf-auth__form .brand { margin: 0 0 6px; font-size: 1.65rem; gap: 12px; letter-spacing: -0.04em; }
 .qf-auth .brand-logo { width: 40px; height: 40px; }
 .qf-auth .qf-auth__form h1 { font-size: clamp(1.3rem, 2vw, 1.65rem); text-align: center; letter-spacing: -0.035em; line-height: 1.3; margin-bottom: 6px; }
 .qf-auth .qf-auth__feedback:empty { display: none; }
-.qf-auth .alert-error { border: 1px solid #f2bdc4; color: #9f2034; font-size: 0.85rem; overflow-wrap: anywhere; }
+.qf-auth .alert-error { border: 1px solid #f2bdc4; color: var(--danger); font-size: 0.85rem; overflow-wrap: anywhere; }
 .qf-auth .qf-auth__field { position: relative; gap: 8px; }
-.qf-auth .qf-auth__field label { font-size: 0.8rem; color: #36374e; }
-.qf-auth .qf-auth__field-icon { position: absolute; left: 15px; bottom: 16px; color: #787a94; pointer-events: none; }
-.qf-auth .input { height: 52px; padding: 12px 14px 12px 44px; border-color: #d7dae6; border-radius: 12px; background: #fcfcff; font-size: 16px; }
-.qf-auth .input::placeholder { color: #73778b; }
-.qf-auth .input:hover { border-color: #a8a5cc; }
-.qf-auth .input:focus { border-color: #6555ce; box-shadow: 0 0 0 4px #6555ce1a; background: #fff; }
+.qf-auth .qf-auth__field label { font-size: 0.8rem; color: var(--text); }
+.qf-auth .qf-auth__field-icon { position: absolute; left: 15px; bottom: 16px; color: var(--muted); pointer-events: none; }
+.qf-auth .input { height: 52px; padding: 12px 14px 12px 44px; border-color: var(--border); border-radius: 12px; background: #fbfcfa; font-size: 16px; }
+.qf-auth .input::placeholder { color: #6b7486; }
+.qf-auth .input:hover { border-color: var(--border-strong); }
+.qf-auth .input:focus { border-color: var(--focus); box-shadow: 0 0 0 4px rgba(47, 93, 158, 0.15); background: #fff; }
 .qf-auth .qf-auth__password { position: relative; }
 .qf-auth .qf-auth__password .input { padding-right: 54px; }
-.qf-auth .qf-auth__password-toggle { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 9px; background: transparent; color: #666780; cursor: pointer; }
-.qf-auth .qf-auth__password-toggle:hover { color: #4937ad; background: #eeeaff; }
-.qf-auth .btn-primary { min-height: 52px; border-radius: 12px; font-size: 0.95rem; background: #5745c6; box-shadow: 0 5px 14px #5745c626; transition: background 160ms, box-shadow 160ms; }
-.qf-auth .btn-primary:hover:not(:disabled) { background: #4735ae; box-shadow: 0 7px 20px #5745c638; }
-.qf-auth .btn-primary:disabled { background: #e6e3f2; color: #686277; opacity: 1; box-shadow: none; }
-.qf-auth a { color: #5140b6; font-weight: 600; text-underline-offset: 4px; }
+.qf-auth .qf-auth__password-toggle { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; }
+.qf-auth .qf-auth__password-toggle:hover { color: var(--primary); background: var(--accent-soft); }
+.qf-auth .btn-primary { min-height: 52px; border-radius: 12px; font-size: 0.95rem; background: var(--primary); box-shadow: 0 5px 14px rgba(27, 42, 74, 0.15); transition: background 160ms, box-shadow 160ms; }
+.qf-auth .btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: 0 7px 20px rgba(27, 42, 74, 0.22); }
+.qf-auth .btn-primary:disabled { background: var(--surface-2); color: var(--muted); opacity: 1; box-shadow: none; }
+.qf-auth a { color: var(--primary); font-weight: 600; text-underline-offset: 4px; }
 .qf-auth a:hover { text-decoration: underline; }
-.qf-auth button:focus-visible, .qf-auth a:focus-visible { outline: 3px solid #6654ce; outline-offset: 4px; }
-.qf-auth .qf-auth__form > p { line-height: 1.9; font-size: 0.8rem; color: #65677c; }
-.qf-auth .qf-auth__footnote { text-align: center; font-size: 0.7rem; color: #737084; margin-top: 32px; }
+.qf-auth button:focus-visible, .qf-auth a:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.qf-auth .qf-auth__form > p { line-height: 1.9; font-size: 0.8rem; color: var(--muted); }
+.qf-auth .qf-auth__footnote { text-align: center; font-size: 0.7rem; color: var(--muted); margin-top: 32px; }
 
 @media (max-width: 860px) {
   .qf-auth .qf-auth__story { padding: 32px 26px; }

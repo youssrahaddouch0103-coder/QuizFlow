@@ -2,41 +2,39 @@
   padding: 8px 0 24px;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid #e4e1ee;
+  border-bottom: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
 }
 .activity-editor { max-width: 1040px; margin-inline: auto; }
 .activity-editor .editor-layout { grid-template-columns: minmax(0, 1fr); }
 .activity-editor .editor-section-heading > svg { display: none; }
-.activity-editor .editor-ai-disclosure { border-bottom: 1px solid #e4e1ee; padding-bottom: 16px; }
-.activity-editor .editor-ai-disclosure summary { width: fit-content; cursor: pointer; padding: 10px 0; font-size: .9rem; font-weight: 600; color: #493490; }
-.activity-editor .editor-ai-disclosure summary span { margin-left: 10px; padding: 3px 7px; background: #eeebf5; border-radius: 4px; font-size: .7rem; color: #655a79; }
-.activity-editor .editor-ai-disclosure summary:focus-visible { outline: 2px solid #6650bf; outline-offset: 4px; border-radius: 4px; }
-.activity-editor .editor-ai-disclosure .ai-panel { margin-top: 12px; background: #fff; }
-.activity-editor .editor-ai-disclosure .editor-ai-symbol { display: none; }
 .activity-editor .editor-heading h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; }
-.activity-editor .editor-save-actions { gap: 10px; }
-.activity-editor .editor-save-actions .btn-primary { box-shadow: 0 4px 12px #5140b520; min-width: 145px; }
+.activity-editor .editor-save-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.activity-editor .editor-save-actions > .row { gap: 10px; flex-wrap: nowrap; }
+.activity-editor .editor-launch-hint { margin: 0; max-width: 300px; color: var(--muted); font-size: 0.8rem; text-align: right; }
+.activity-editor .editor-error-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.activity-editor .editor-error-link:hover { color: var(--text); }
+.activity-editor .editor-save-actions .btn-primary { box-shadow: 0 4px 12px rgba(27, 42, 74, 0.12); min-width: 145px; }
 .activity-editor .editor-intro { border-top: 1px solid var(--border); box-shadow: none; }
-.activity-editor .editor-intro .tabs { padding: 5px; border: 1px solid #e4deef; background: #f4f1f9; }
+.activity-editor .editor-intro .tabs { padding: 5px; border: 1px solid var(--border); background: var(--surface-2); }
 .activity-editor .editor-intro .tabs button { min-width: 100px; }
-.activity-editor .editor-intro .tabs button.active { color: #493490; }
+.activity-editor .editor-intro .tabs button.active { color: var(--primary); }
 .activity-editor .editor-assistance { position: static; }
 .editor-checklist h3 { font-size: 1.05rem; }
 .editor-checklist ul { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 15px; }
-.editor-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: .85rem; color: #49465a; }
-.editor-check-mark { display: grid; place-items: center; flex: 0 0 23px; height: 23px; border: 1px solid #d9d5e5; border-radius: 50%; background: #f6f4fa; font-weight: 700; }
+.editor-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: .85rem; color: var(--text); }
+.editor-check-mark { display: grid; place-items: center; flex: 0 0 23px; height: 23px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); font-weight: 700; }
 .is-complete .editor-check-mark { background: #e7f3ec; border-color: #b0d4bf; color: #246743; }
-.editor-check-status { display: block; margin-top: 2px; font-size: .72rem; color: #716b80; }
+.editor-check-status { display: block; margin-top: 2px; font-size: .72rem; color: var(--muted); }
 .is-complete .editor-check-status { color: #246743; }
-.editor-checklist > p { border-top: 1px solid #e8e4ef; padding-top: 14px; color: #676075; font-size: .78rem; line-height: 1.6; }
-.activity-editor .question-head .btn-danger { margin-left: 4px; background: transparent; color: #a32f44; }
+.editor-checklist > p { border-top: 1px solid var(--border); padding-top: 14px; color: var(--muted); font-size: .78rem; line-height: 1.6; }
+.activity-editor .question-head .btn-danger { margin-left: 4px; background: transparent; color: var(--danger); }
 .activity-editor .question-head .btn-danger:hover { background: #fcebef; }
-.activity-editor .question-card { box-shadow: 0 3px 16px #30276506; }
-.activity-editor .question-card:focus-within { border-color: #ad9dd7; }
-.activity-editor .question-head .btn-ghost { border: 1px solid #e4dfed; background: #fff; }
-.activity-editor .ai-panel { border-color: #e2ddeb; box-shadow: none; }
+.activity-editor .question-card { box-shadow: 0 3px 16px #1b2a4a08; }
+.activity-editor .question-card:focus-within { border-color: var(--border-strong); }
+.activity-editor .question-head .btn-ghost { border: 1px solid var(--border); background: #fff; }
+.activity-editor .ai-panel { border-color: var(--border); box-shadow: none; }
 .activity-editor :is(.btn, .card, .input, .textarea) { transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
 @media (prefers-reduced-motion: no-preference) {
   .activity-editor .question-card { animation: editor-question-in .18s ease-out; }
@@ -47,9 +45,14 @@
 }
 @media (max-width: 600px) {
   .activity-editor .editor-heading { padding: 18px; }
-  .activity-editor .editor-save-actions { width: 100%; }
+  .activity-editor .editor-save-actions { width: 100%; align-items: stretch; }
+  .activity-editor .editor-save-actions > .row { width: 100%; }
+  .activity-editor .editor-launch-hint { max-width: none; text-align: left; }
   .activity-editor .editor-save-actions .btn { flex: 1; }
   .activity-editor .question-head .question-number { flex-basis: 100%; margin-bottom: 6px; }
   .activity-editor .question-head .spacer { display: none; }
   .activity-editor .question-head .select { flex: 1; min-width: 140px; }
 }
+/* Champ obligatoire manquant (ex. titre) */
+.activity-editor .input.is-invalid { border-color: var(--danger); background: var(--danger-soft); box-shadow: 0 0 0 3px #a3302a1f; }
+.activity-editor .editor-field-error { margin: 6px 0 0; color: var(--danger); font-size: 0.85rem; font-weight: 600; }

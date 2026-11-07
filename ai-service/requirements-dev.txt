@@ -1,0 +1,3 @@
+-r requirements.txt
+# Tests uniquement (fabrication de PDF d'exemple)
+reportlab==5.1.0

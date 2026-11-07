@@ -4,7 +4,8 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # PostgreSQL 16 + extension pgvector (recherche vectorielle du RAG).
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: quizflow
       POSTGRES_USER: quizflow
@@ -33,10 +34,20 @@ services:
 
   ai-service:
     build: ./ai-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
+      # RAG : bibliothèque de PDF (schéma « rag » de la même base PostgreSQL).
+      DATABASE_URL: postgresql://quizflow:quizflow@postgres:5432/quizflow
+      # Secret partagé avec le backend : seul lui peut appeler le service IA.
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:-dev-internal-token-change-me}
+    volumes:
+      # Modèle d'embeddings (~500 Mo) gardé entre les reconstructions : téléchargé une seule fois.
+      - ai-models:/models
     ports:
       - "8000:8000"
 
@@ -54,6 +65,7 @@ services:
       MONGO_URI: mongodb://mongo:27017/quizflow
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-dev-secret-change-me-0123456789}
       AI_SERVICE_URL: http://ai-service:8000
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:-dev-internal-token-change-me}
       # En local, les codes de confirmation s'affichent dans les logs du backend (APP_MAIL_MODE=log).
       # Mettre APP_MAIL_MODE=smtp dans .env et configurer le SMTP pour envoyer de vrais emails.
       APP_MAIL_MODE: ${APP_MAIL_MODE:-log}
@@ -78,3 +90,4 @@ services:
 volumes:
   pg-data:
   mongo-data:
+  ai-models:
