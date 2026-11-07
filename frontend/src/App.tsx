@@ -4,6 +4,7 @@ import JoinPage from './pages/student/JoinPage'
 import PlayPage from './pages/student/PlayPage'
 import ActivityEditorPage from './pages/teacher/ActivityEditorPage'
 import { LoginPage, RegisterPage } from './pages/teacher/AuthPages'
+import PasswordResetPage from './pages/teacher/PasswordResetPage'
 import DashboardPage from './pages/teacher/DashboardPage'
 import HistoryPage from './pages/teacher/HistoryPage'
 import LiveSessionPage from './pages/teacher/LiveSessionPage'
@@ -27,6 +28,7 @@ export default function App() {
 
       {/* Enseignants */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<PasswordResetPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/sessions/:id/live"

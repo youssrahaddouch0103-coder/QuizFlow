@@ -3,6 +3,12 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { ErrorAlert, Logo } from '../../components/ui'
+import AuthPageLayout from './AuthPageLayout'
+import AuthField from './AuthField'
+import PasswordInput from './PasswordInput'
+import './AuthPages.css'
+import { readPending, storePending } from '../../auth/pendingRegistration'
+import EmailVerificationForm from './EmailVerificationForm'
 
 export function LoginPage() {
   const { teacher, login } = useAuth()
@@ -29,21 +35,24 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card stack" onSubmit={submit}>
+    <AuthPageLayout mode="login">
+      <form className="card auth-card stack qf-auth__form" onSubmit={submit} aria-busy={busy}>
         <div className="brand">
           <Logo size={36} /> QuizFlow
         </div>
-        <h2>Connexion enseignant</h2>
-        <ErrorAlert message={error} />
-        <div className="field">
+        <h1>Connexion enseignant</h1>
+        <div className="qf-auth__feedback" aria-live="polite" aria-atomic="true">
+          <ErrorAlert message={error} />
+        </div>
+        <AuthField icon="email">
           <label htmlFor="email">Email</label>
           <input id="email" className="input" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="field">
+        </AuthField>
+        <AuthField icon="lock">
           <label htmlFor="password">Mot de passe</label>
-          <input id="password" className="input" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
+          <PasswordInput id="password" className="input" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </AuthField>
+        <Link className="small" to="/forgot-password">Mot de passe oublié ?</Link>
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
           {busy ? 'Connexion…' : 'Se connecter'}
         </button>
@@ -53,13 +62,13 @@ export function LoginPage() {
           Étudiant ? <Link to="/join">Rejoindre une session</Link>
         </p>
       </form>
-    </div>
+    </AuthPageLayout>
   )
 }
 
 export function RegisterPage() {
   const { teacher, register } = useAuth()
-  const navigate = useNavigate()
+  const [pending, setPending] = useState(readPending)
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -73,8 +82,9 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      await register(email, password, displayName)
-      navigate('/dashboard')
+      const response = await register(email, password, displayName)
+      setPassword('')
+      setPending(response)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -82,26 +92,30 @@ export function RegisterPage() {
     }
   }
 
+  if (pending) return <EmailVerificationForm pending={pending} onUpdate={setPending} onRestart={() => { storePending(null); setPending(null) }} />
+
   return (
-    <div className="auth-page">
-      <form className="card auth-card stack" onSubmit={submit}>
+    <AuthPageLayout mode="register">
+      <form className="card auth-card stack qf-auth__form" onSubmit={submit} aria-busy={busy}>
         <div className="brand">
           <Logo size={36} /> QuizFlow
         </div>
-        <h2>Créer un compte enseignant</h2>
-        <ErrorAlert message={error} />
-        <div className="field">
+        <h1>Créer un compte enseignant</h1>
+        <div className="qf-auth__feedback" aria-live="polite" aria-atomic="true">
+          <ErrorAlert message={error} />
+        </div>
+        <AuthField icon="user">
           <label htmlFor="name">Nom affiché</label>
           <input id="name" className="input" required maxLength={100} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Pr. Alaoui" />
-        </div>
-        <div className="field">
+        </AuthField>
+        <AuthField icon="email">
           <label htmlFor="email">Email</label>
           <input id="email" className="input" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="field">
+        </AuthField>
+        <AuthField icon="lock">
           <label htmlFor="password">Mot de passe (8 caractères minimum)</label>
-          <input id="password" className="input" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
+          <PasswordInput id="password" className="input" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </AuthField>
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
           {busy ? 'Création…' : 'Créer mon compte'}
         </button>
@@ -109,6 +123,6 @@ export function RegisterPage() {
           Déjà inscrit ? <Link to="/login">Se connecter</Link>
         </p>
       </form>
-    </div>
+    </AuthPageLayout>
   )
 }

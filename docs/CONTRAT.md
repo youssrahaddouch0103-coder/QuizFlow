@@ -24,16 +24,43 @@ Toutes les erreurs ont la même forme :
 
 ## API REST
 
-Les routes `/api/**` exigent `Authorization: Bearer <jwt>`, sauf `/api/auth/register`, `/api/auth/login` et `/api/public/**`.
+Les routes `/api/**` exigent `Authorization: Bearer <jwt>`, sauf `/api/auth/register`, `/api/auth/login`, les POST `/api/auth/email/verify` et `/api/auth/email/resend`, et `/api/public/**`.
 Documentation interactive générée : http://localhost:8081/swagger-ui.html
 
 ### Authentification enseignant
 
 | Méthode | Route | Corps | Réponse |
 |---|---|---|---|
-| POST | `/api/auth/register` | `{ email, password (8+), displayName }` | 201 `{ token, teacher }` |
+| POST | `/api/auth/register` | `{ email, password (8+ ; maximum 72 octets UTF-8), displayName }` | 202 `{ challengeId, expiresAt, resendAvailableAt, message }` |
+| POST | `/api/auth/email/verify` | `{ challengeId, code }` (6 chiffres) | 200 `{ token, teacher }` |
+| POST | `/api/auth/email/resend` | `{ challengeId }` | 202 `{ challengeId, expiresAt, resendAvailableAt, message }` |
 | POST | `/api/auth/login` | `{ email, password }` | `{ token, teacher }` |
 | GET | `/api/auth/me` | — | `{ id, email, displayName }` |
+
+L'inscription ne crée pas de compte actif et ne délivre aucun JWT avant confirmation.
+`challengeId` est un UUID aléatoire ; `expiresAt` et `resendAvailableAt` sont des dates UTC ISO 8601.
+Le code est envoyé uniquement par email, jamais dans une réponse API ou une URL.
+Le message d'attente est « Vérifiez votre boîte mail pour confirmer votre inscription. ».
+Une adresse déjà utilisée reçoit la même forme de réponse avec un identifiant sans effet ;
+aucune inscription existante n'est révélée ni remplacée. Conserver l'identifiant reçu initialement
+pour le renvoi. Les anciens comptes restent utilisables sans être déclarés vérifiés.
+
+| HTTP | Code | Message |
+|---|---|---|
+| 400 | `INVALID_VERIFICATION_CODE` | Ce code est incorrect ou a expiré. |
+| 429 | `VERIFICATION_RATE_LIMITED` | Trop de tentatives. Réessayez plus tard. |
+| 429 | `VERIFICATION_RESEND_TOO_SOON` | Patientez avant de demander un nouveau code. |
+| 503 | `EMAIL_DELIVERY_UNAVAILABLE` | L’envoi est momentanément indisponible. Réessayez plus tard. |
+
+Paramètres initiaux : validité 10 minutes, 5 erreurs par code, renvoi après 60 secondes,
+5 demandes d'envoi par email et par heure, 25 vérifications par email/challenge et par heure,
+60 requêtes par origine réseau et par minute. Les quotas persistants survivent aux erreurs
+et aux redémarrages. Un renvoi invalide l'ancien code sans effacer les quotas cumulés.
+Les inscriptions en attente sont conservées au maximum 24 heures (nettoyage périodique).
+La validité est contrôlée à chaque opération, indépendamment du nettoyage.
+
+**Lot backend uniquement : ne pas déployer avec le formulaire React ou le script smoke actuels,
+qui attendent encore un JWT dès l'inscription.** Voir `docs/EMAIL_VERIFICATION.md` pour la configuration.
 
 ### Activités (MongoDB)
 
