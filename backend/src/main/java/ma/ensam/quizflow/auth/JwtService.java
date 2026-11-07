@@ -19,8 +19,10 @@ public class JwtService {
 
     private final SecretKey key;
     private final Duration validity;
+    private final TeacherRepository teachers;
 
-    public JwtService(AppProperties props) {
+    public JwtService(AppProperties props, TeacherRepository teachers) {
+        this.teachers = teachers;
         byte[] bytes = props.jwt().secret().getBytes(StandardCharsets.UTF_8);
         if (bytes.length < 32) {
             throw new IllegalStateException("app.jwt.secret doit contenir au moins 32 caractères");
@@ -35,6 +37,7 @@ public class JwtService {
                 .subject(String.valueOf(teacher.getId()))
                 .claim("email", teacher.getEmail())
                 .claim("name", teacher.getDisplayName())
+                .claim("authVersion", teacher.getAuthVersion())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(validity)))
                 .signWith(key)
@@ -45,8 +48,14 @@ public class JwtService {
     public Optional<TeacherPrincipal> parse(String token) {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            long teacherId = Long.parseLong(claims.getSubject());
+            long version = Optional.ofNullable(claims.get("authVersion", Long.class)).orElse(0L);
+            if (teachers.findById(teacherId)
+                    .filter(teacher -> teacher.getAuthVersion() == version).isEmpty()) {
+                return Optional.empty();
+            }
             return Optional.of(new TeacherPrincipal(
-                    Long.valueOf(claims.getSubject()),
+                    teacherId,
                     claims.get("email", String.class),
                     claims.get("name", String.class)));
         } catch (JwtException | IllegalArgumentException e) {
