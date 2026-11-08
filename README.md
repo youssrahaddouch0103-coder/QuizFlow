@@ -1,6 +1,6 @@
 # QuizFlow
 
-Plateforme d'interaction en temps réel pour la classe (dans l'esprit de Wooclap) : l'enseignant lance un quiz ou un
+Plateforme d'interaction en temps réel pour la classe  : l'enseignant lance un quiz ou un
 sondage, les étudiants rejoignent avec un QR code depuis leur téléphone, et les résultats s'affichent en direct.
 Une IA aide l'enseignant à générer des questions à partir de son cours : texte collé ou PDF importé (RAG, avec la page source de chaque question).
 
