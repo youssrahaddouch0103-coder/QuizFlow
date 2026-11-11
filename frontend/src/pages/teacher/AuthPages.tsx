@@ -9,6 +9,7 @@ import PasswordInput from './PasswordInput'
 import './AuthPages.css'
 import { readPending, storePending } from '../../auth/pendingRegistration'
 import EmailVerificationForm from './EmailVerificationForm'
+import GoogleAuthButton from './GoogleAuthButton'
 
 export function LoginPage() {
   const { teacher, login } = useAuth()
@@ -56,6 +57,7 @@ export function LoginPage() {
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
           {busy ? 'Connexion…' : 'Se connecter'}
         </button>
+        <GoogleAuthButton disabled={busy} />
         <p className="muted small" style={{ textAlign: 'center' }}>
           Pas encore de compte ? <Link to="/register">Créer un compte</Link>
           <br />
@@ -119,6 +121,7 @@ export function RegisterPage() {
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
           {busy ? 'Création…' : 'Créer mon compte'}
         </button>
+        <GoogleAuthButton disabled={busy} />
         <p className="muted small" style={{ textAlign: 'center' }}>
           Déjà inscrit ? <Link to="/login">Se connecter</Link>
         </p>

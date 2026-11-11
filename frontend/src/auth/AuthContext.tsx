@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api } from '../api/api'
 import { setUnauthorizedHandler, tokenStore } from '../api/client'
-import type { Teacher } from '../api/types'
+import type { AuthResponse, Teacher } from '../api/types'
 import { storePending, type PendingRegistration } from './pendingRegistration'
 
 interface AuthState {
   teacher: Teacher | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  completeGoogleLogin: (response: AuthResponse) => void
   register: (email: string, password: string, displayName: string) => Promise<PendingRegistration>
   verifyEmail: (challengeId: string, code: string) => Promise<void>
   logout: () => void
@@ -42,6 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       teacher,
       loading,
       logout,
+      completeGoogleLogin: ({ token, teacher }) => {
+        tokenStore.set(token)
+        setTeacher(teacher)
+        storePending(null)
+      },
       login: async (email, password) => {
         const res = await api.login(email, password)
         tokenStore.set(res.token)

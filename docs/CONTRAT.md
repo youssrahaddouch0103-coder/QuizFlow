@@ -36,6 +36,12 @@ Documentation interactive générée : http://localhost:8081/swagger-ui.html
 | POST | `/api/auth/email/resend` | `{ challengeId }` | 202 `{ challengeId, expiresAt, resendAvailableAt, message }` |
 | POST | `/api/auth/login` | `{ email, password }` | `{ token, teacher }` |
 | GET | `/api/auth/me` | — | `{ id, email, displayName }` |
+| POST | `/api/auth/google/challenge` | `{}` | 200 `{ clientId, nonce }` et cookie de défi, ou 204 si Google est désactivé |
+| POST | `/api/auth/google/session` | `{ credential }` avec le cookie de défi | 200 `{ token, teacher }` |
+
+Les deux routes Google sont publiques et acceptent uniquement du JSON. Le défi est valable 5 minutes et est consommé après ouverture de la session. Une adresse Gmail ou Google Workspace dont Google confirme la propriété est automatiquement associée au compte QuizFlow existant de même adresse. Le mot de passe QuizFlow existant est conservé. Un compte déjà associé à une autre identité Google refuse toute nouvelle association. Un compte Google déjà associé est reconnu par son identifiant Google.
+
+Erreurs Google : `401 GOOGLE_CREDENTIAL_INVALID` (jeton ou défi invalide), `409 GOOGLE_ALREADY_LINKED` (compte QuizFlow déjà associé à une autre identité Google), `400 GOOGLE_EMAIL_UNSUPPORTED` (adresse non vérifiable pour la création ou l'association automatique), `429 VERIFICATION_RATE_LIMITED` et `503 GOOGLE_UNAVAILABLE`.
 
 L'inscription ne crée pas de compte actif et ne délivre aucun JWT avant confirmation.
 `challengeId` est un UUID aléatoire ; `expiresAt` et `resendAvailableAt` sont des dates UTC ISO 8601.
