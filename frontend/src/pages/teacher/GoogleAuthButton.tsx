@@ -97,7 +97,12 @@ export default function GoogleAuthButton({ disabled }: { disabled: boolean }) {
         const challenge = await request<GoogleChallenge | undefined>('/api/auth/google/challenge', {
           method: 'POST', body: {}, auth: false,
         })
-        if (!active || !challenge) return
+        if (!active) return
+        if (!challenge) {
+          setEnabled(false)
+          setReady(false)
+          return
+        }
         setEnabled(true)
         const api = await loadIdentity()
         if (!active || !element) return
@@ -130,8 +135,8 @@ export default function GoogleAuthButton({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div hidden={!enabled} className="stack" aria-busy={busy}
-      style={enabled ? undefined : { display: 'none' }}>
+    <div hidden={!enabled && !error} className="stack" aria-busy={busy}
+      style={enabled || error ? undefined : { display: 'none' }}>
       <span className="muted small" style={{ textAlign: 'center' }}>ou</span>
       <div ref={button} hidden={!ready}
         inert={busy || disabled} style={{ alignSelf: 'center', maxWidth: '100%' }} />

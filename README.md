@@ -65,6 +65,61 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt   # Windows : 
 LLM_API_KEY=... .venv/bin/uvicorn app.main:app --reload --port 8000  # docs : http://localhost:8000/docs
 ```
 
+## Connexion Google en local
+
+Dans le fichier **`.env` à la racine du projet** (ignoré par Git), renseigner
+`GOOGLE_CLIENT_ID=<votre-identifiant-Web>.apps.googleusercontent.com`.
+Ne pas remplacer un `.env` existant par le modèle : il peut contenir d'autres secrets.
+Ne pas mettre la vraie valeur dans `.env.example`, le code ou un commit.
+Le client ID est un identifiant public transmis au navigateur ; aucun **client secret**
+Google n'est nécessaire pour ce flux et il ne faut pas en ajouter au frontend.
+
+Dans Google Auth Platform, choisir un client OAuth **Application Web** et autoriser
+les origines JavaScript `http://localhost`, `http://localhost:3000` (Docker) et
+`http://localhost:5173` (Vite). Ajouter le port exact si différent, par exemple 5174.
+Configurer l'audience/écran de consentement et les utilisateurs de test si nécessaire.
+Ce flux utilise un callback JavaScript, pas une URL de redirection OAuth.
+Utiliser localhost pour ce test : une IP privée en HTTP n'est pas un remplacement.
+Voir la [configuration officielle Google](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+
+Avec Docker Desktop démarré, depuis la racine :
+
+```powershell
+docker compose up -d --build backend frontend
+```
+
+Compose lit `.env` et transmet `GOOGLE_CLIENT_ID` au backend. Un simple
+`docker compose restart` ne recharge pas les variables d'environnement.
+Pour Spring Boot lancé directement, `.env` n'est **pas** chargé automatiquement :
+définir `GOOGLE_CLIENT_ID` dans l'environnement de la configuration Run de l'IDE
+(configuration locale non partagée), ou charger uniquement cette valeur depuis
+`.env` dans le terminal PowerShell avant Maven, sans l'afficher :
+
+```powershell
+# Depuis la racine ; format attendu dans .env : GOOGLE_CLIENT_ID=valeur
+$googleLine = Get-Content -LiteralPath .env | Where-Object { $_ -match '^\s*GOOGLE_CLIENT_ID\s*=' } | Select-Object -Last 1
+if (-not $googleLine) { throw 'GOOGLE_CLIENT_ID absent de .env' }
+$env:GOOGLE_CLIENT_ID = ($googleLine -split '=', 2)[1].Trim().Trim('"').Trim("'")
+Remove-Variable googleLine
+Set-Location backend
+mvn spring-boot:run
+```
+
+Aucune variable `VITE_GOOGLE_CLIENT_ID` n'est utilisée. Le frontend appelle
+`POST /api/auth/google/challenge` via le proxy Vite/nginx, reçoit le client ID et
+un nonce, puis charge Google Identity Services. Le backend garde une preuve dans
+un cookie HttpOnly et vérifie la signature, l'émetteur, l'audience, l'expiration
+et le nonce du jeton envoyé à `POST /api/auth/google/session` avant de créer la
+session QuizFlow. Le challenge est à usage unique et expire après cinq minutes.
+
+Vérification : ouvrir `/login` ou `/register` et consulter l'onglet Réseau.
+Le challenge doit répondre 200 avec un cookie HttpOnly (204 signifie désactivé).
+Choisir un compte Gmail ou Google Workspace ; la session doit répondre 200 et
+rediriger vers `/dashboard`. Recharger pour vérifier la persistance de la session.
+Ne pas copier les jetons ni les cookies dans les logs ou captures partagées.
+Une adresse tierce associée à Google doit utiliser la connexion par email.
+Si la page est restée ouverte plus de cinq minutes, réessayer pour renouveler le challenge.
+
 ## Tests
 
 ```bash

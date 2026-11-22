@@ -10,7 +10,8 @@ export default defineConfig({
     port: 5173,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      // Google Identity Services recommends this policy for HTTP localhost testing.
+      'Referrer-Policy': 'no-referrer-when-downgrade',
     },
     proxy: {
       '/api': 'http://localhost:8081',
