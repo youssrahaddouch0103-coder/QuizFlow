@@ -8,7 +8,7 @@
 // Avec un vrai SMTP, définir SMOKE_EMAIL et SMOKE_PASSWORD (compte déjà confirmé).
 //
 // Vérifie : création, lancement, connexion WebSocket, réponses, refus des doublons et des réponses tardives,
-// statistiques en direct, clôture, scores et classement.
+// statistiques en direct, clôture, scores et classement, nouveaux types de questions (nuage, note, classement, Q&A).
 
 import { Client } from '@stomp/stompjs'
 import { execSync } from 'node:child_process'
@@ -210,14 +210,77 @@ async function main() {
   const history = await call('GET', '/api/sessions?scope=finished', { token })
   ok(history.data.some((s) => s.id === sessionId), 'session présente dans l’historique')
 
-  // 8. IA (fonctionne aussi en mode mock, sans clé)
+  // 8. Nouveaux types de questions dans un sondage : nuage de mots, note, classement, questions du public
+  const mixed = await call('POST', '/api/activities', {
+    token,
+    body: {
+      type: 'SONDAGE',
+      title: 'Types de questions',
+      questions: [
+        { text: 'Un mot ?', kind: 'NUAGE', choiceMode: 'UNIQUE', choices: [] },
+        { text: 'Votre note ?', kind: 'NOTE', choiceMode: 'UNIQUE', choices: [] },
+        { text: 'Classez', kind: 'CLASSEMENT', choiceMode: 'UNIQUE', choices: [{ label: 'Java' }, { label: 'Python' }, { label: 'C' }] },
+        { text: 'Vos questions ?', kind: 'QR', choiceMode: 'UNIQUE', choices: [] },
+      ],
+    },
+  })
+  ok(mixed.status === 201 && mixed.data.status === 'PRETE' && mixed.data.questions[2].kind === 'CLASSEMENT', 'activité avec nuage, note, classement et Q&A enregistrée')
+  const [qCloud, qNote, qRank, qQa] = mixed.data.questions
+  const s2 = (await call('POST', '/api/sessions', { token, body: { activityId: mixed.data.id } })).data
+  const teacher2 = await connect(s2.code, token)
+  const pA = (await call('POST', `/api/public/sessions/${s2.code}/join`, { body: { pseudo: 'Alice' } })).data.token
+  const pB = (await call('POST', `/api/public/sessions/${s2.code}/join`, { body: { pseudo: 'Bob' } })).data.token
+  const send = (player, body) => call('POST', `/api/public/sessions/${s2.code}/answers`, { player, body })
+
+  await call('POST', `/api/sessions/${s2.id}/start`, { token })
+  await send(pA, { questionId: qCloud.id, text: 'Java' })
+  await send(pB, { questionId: qCloud.id, text: ' java ' })
+  await wait(600)
+  const cloud = teacher2.events.filter((e) => e.type === 'ANSWER_STATS').at(-1)?.payload
+  ok(cloud?.words?.length === 1 && cloud.words[0].count === 2, 'nuage de mots : « Java » et « java » regroupés')
+  await call('POST', `/api/sessions/${s2.id}/questions/close`, { token })
+
+  await call('POST', `/api/sessions/${s2.id}/questions/next`, { token })
+  const badNote = await send(pA, { questionId: qNote.id, value: 9 })
+  ok(badNote.status === 400, 'note hors de 1 à 5 refusée')
+  await send(pA, { questionId: qNote.id, value: 5 })
+  await send(pB, { questionId: qNote.id, value: 3 })
+  await call('POST', `/api/sessions/${s2.id}/questions/close`, { token })
+
+  await call('POST', `/api/sessions/${s2.id}/questions/next`, { token })
+  const [java, python, c] = qRank.choices.map((x) => x.id)
+  const partial = await send(pA, { questionId: qRank.id, choiceIds: [python, java] })
+  ok(partial.status === 400, 'classement incomplet refusé')
+  await send(pA, { questionId: qRank.id, choiceIds: [python, java, c] })
+  await send(pB, { questionId: qRank.id, choiceIds: [python, c, java] })
+  await call('POST', `/api/sessions/${s2.id}/questions/close`, { token })
+
+  await call('POST', `/api/sessions/${s2.id}/questions/next`, { token })
+  const post = await call('POST', `/api/public/sessions/${s2.code}/contributions`, { player: pA, body: { questionId: qQa.id, text: 'Quand est l’examen ?' } })
+  ok(post.status === 201 && !!post.data.id, 'question du public publiée')
+  const own = await call('POST', `/api/public/sessions/${s2.code}/contributions/${post.data.id}/vote`, { player: pA })
+  ok(own.status === 400, 'impossible de voter pour sa propre question')
+  const v = await call('POST', `/api/public/sessions/${s2.code}/contributions/${post.data.id}/vote`, { player: pB })
+  ok(v.status === 200 && v.data.voted === true, 'vote pour la question d’un autre étudiant')
+  const done = await call('POST', `/api/sessions/${s2.id}/contributions/${post.data.id}`, { token, body: { done: true } })
+  ok(done.status === 200 && done.data.contributions?.[0]?.done === true && done.data.contributions[0].votes === 1, 'question marquée « traitée » par l’enseignant')
+  await call('POST', `/api/sessions/${s2.id}/questions/close`, { token })
+
+  const end2 = (await call('POST', `/api/sessions/${s2.id}/end`, { token })).data
+  const byId = Object.fromEntries((end2?.questions ?? []).map((q) => [q.id, q]))
+  ok(byId[qNote.id]?.rating?.average === 4, 'résultats : note moyenne 4 sur 5')
+  ok(byId[qRank.id]?.ranking?.[0]?.choiceId === python, 'résultats : Python classé premier')
+  ok(byId[qQa.id]?.contributions?.length === 1, 'résultats : questions du public enregistrées')
+  await teacher2.client.deactivate()
+
+  // 9. IA (fonctionne aussi en mode mock, sans clé)
   const ai = await call('POST', '/api/ai/questions', {
     token,
     body: { text: 'Le pattern Composite compose des objets en arbre. Le pattern Proxy contrôle l’accès à un objet réel.', type: 'QUIZ', count: 2 },
   })
   ok(ai.status === 200 && ai.data.questions.length > 0, `génération IA (${ai.status}, modèle ${ai.data?.model ?? '?'})`)
 
-  // 9. RAG : import d'un PDF, analyse (embeddings + pgvector), génération avec pages citées, suppression
+  // 10. RAG : import d'un PDF, analyse (embeddings + pgvector), génération avec pages citées, suppression
   const pdf = makePdf([
     'Chapitre 1. Le pattern Composite compose des objets en structure d arbre. Un client traite de la meme facon un objet simple et un groupe d objets.',
     'Chapitre 2. Le pattern Proxy controle l acces a un objet reel. Il peut retarder une creation couteuse ou verifier les droits avant de transmettre l appel.',

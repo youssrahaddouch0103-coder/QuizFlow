@@ -19,3 +19,6 @@ __pycache__/
 .vscode/
 *.iml
 .DS_Store
+
+# Documents générés à part (présentations, captures)
+Claude outputs/

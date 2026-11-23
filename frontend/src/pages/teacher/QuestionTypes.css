@@ -1,0 +1,72 @@
+/* Barre latérale des types de questions (glisse depuis la droite). */
+.qt-backdrop { position: fixed; inset: 0; z-index: 60; background: #1b2a4a40; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.qt-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+.qt-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 92vw);
+  background: var(--bg, #f4f5f0);
+  border-left: 1px solid var(--border);
+  box-shadow: -16px 0 40px -20px #1b2a4a66;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.qt-drawer.is-open { transform: none; visibility: visible; transition: transform 0.25s ease, visibility 0s; }
+.qt-drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.qt-drawer__list { display: grid; gap: 12px; padding: 16px; overflow-y: auto; }
+
+.qt-card {
+  display: grid;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.qt-card:hover { border-color: var(--border-strong); box-shadow: 0 6px 18px -12px #1b2a4a66; }
+.qt-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.qt-card.is-current { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.qt-card__label { display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-weight: 650; }
+.qt-icon { width: 22px; height: 22px; flex: none; color: var(--primary); }
+
+/* Aperçus dessinés */
+.qt-prev { display: grid; place-content: center; height: 78px; padding: 10px 28px; background: var(--surface-2); }
+.qt-prev--bars { gap: 6px; place-content: center stretch; }
+.qt-prev--bars span { display: block; height: 9px; border-radius: 999px; background: #ffffff; }
+.qt-prev--bars i { display: block; height: 100%; border-radius: 999px; }
+.qt-prev--cloud { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px; font-weight: 800; font-size: 0.8rem; }
+.qt-prev--text { gap: 6px; place-content: center stretch; }
+.qt-prev--text span { display: block; height: 22px; border-radius: 7px; background: #fff; }
+.qt-prev--text span:last-child { width: 70%; }
+.qt-prev--stars { white-space: nowrap; font-size: 1.4rem; letter-spacing: 2px; color: #e3a008; }
+.qt-prev--stars i { font-style: normal; color: #cfd6c8; }
+.qt-prev--rank, .qt-prev--posts { gap: 5px; place-content: center stretch; }
+.qt-prev--rank span, .qt-prev--posts span { display: flex; align-items: center; gap: 6px; }
+.qt-prev--rank em { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; background: var(--primary); color: #fff; font-size: 0.6rem; font-style: normal; font-weight: 700; }
+.qt-prev--rank i { display: block; height: 9px; border-radius: 999px; background: var(--c4); }
+.qt-prev--posts span { padding: 4px 6px; border-radius: 6px; background: #fff; }
+.qt-prev--posts em { font-size: 0.6rem; font-style: normal; font-weight: 800; color: var(--primary); }
+.qt-prev--posts i { display: block; flex: 1; height: 6px; border-radius: 999px; background: #cfd6c8; }
+
+/* Type affiché dans l'en-tête d'une question, avec le bouton pour en changer. */
+.qt-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-weight: 650; font-size: 0.85rem; cursor: pointer; }
+.qt-chip:hover { border-color: var(--border-strong); }
+.qt-chip .qt-icon { width: 18px; height: 18px; }
+.qt-chip small { color: var(--muted); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-drawer, .qt-backdrop { transition: none; }
+}
+.qt-drawer__list { flex: 1; min-height: 0; align-content: start; grid-auto-rows: max-content; }

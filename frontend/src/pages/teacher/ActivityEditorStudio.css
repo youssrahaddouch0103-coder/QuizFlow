@@ -42,3 +42,17 @@
   .activity-editor .question-card > .stack { grid-template-columns: minmax(0, 1fr); padding: 14px; }
   .activity-editor .question-card textarea { padding: 16px; }
 }
+
+/* Trois colonnes : questions à gauche, édition au centre, assistant IA à droite. */
+.activity-editor .editor-layout.has-side { grid-template-columns: 200px minmax(0, 1fr) 300px; }
+.editor-side { position: sticky; top: 90px; align-self: start; max-height: calc(100vh - 110px); overflow-y: auto; }
+@media (max-width: 1200px) {
+  .activity-editor .editor-layout.has-side { grid-template-columns: 200px minmax(0, 1fr); }
+  .editor-side { grid-column: 2; position: static; max-height: none; }
+}
+@media (max-width: 900px) {
+  .activity-editor .editor-layout.has-side { grid-template-columns: minmax(0, 1fr); }
+  .editor-side { grid-column: 1; }
+}
+/* L'éditeur a trois colonnes : il prend plus de largeur que les autres pages. */
+.container:has(> .activity-editor) { max-width: 1400px; }

@@ -3,12 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../api/api'
 import { errorMessage } from '../../api/client'
 import type { Activity, ActivityStatus, SessionSummary } from '../../api/types'
-import { useAuth } from '../../auth/AuthContext'
 import { ErrorAlert, PageLoader, StateBadge } from '../../components/ui'
 import ActivityCard from './ActivityCard'
 import ActivitySymbol from '../../components/ActivitySymbol'
 import DashboardEmptyState from './DashboardEmptyState'
-import QuizShowcase from './QuizShowcase'
 import './DashboardPage.css'
 
 type Filter = 'ALL' | ActivityStatus
@@ -26,7 +24,6 @@ const searchKey = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { teacher } = useAuth()
   const [activities, setActivities] = useState<Activity[] | null>(null)
   const [activeSessions, setActiveSessions] = useState<SessionSummary[]>([])
   const [filter, setFilter] = useState<Filter>('ALL')
@@ -116,28 +113,20 @@ export default function DashboardPage() {
   return (
     <div className="stack dashboard-page">
       <header className="card dashboard-heading">
-        <div className="dashboard-hero-top">
-          <div className="dashboard-hero-text">
-            {teacher?.displayName.trim() && <p className="dashboard-greeting">Bonjour {teacher.displayName.trim()}</p>}
-            <h1>Mes activités</h1>
-            <p>Retrouvez vos activités ou choisissez ce que vous voulez créer.</p>
-            <p className="dashboard-hero-hint">Vos élèves répondent depuis leur téléphone, les résultats s’affichent en direct.</p>
-          </div>
-          <QuizShowcase />
-        </div>
+        <h1 className="sr-only">Mes activités</h1>
         <div className="dashboard-create">
           <Link to="/activities/new?type=QUIZ" className="dashboard-create-link">
             <span className="dashboard-create-icon" aria-hidden="true">
               <ActivitySymbol kind="quiz" />
             </span>
-            <span><strong>Nouveau quiz</strong><small>Testez les connaissances.</small></span>
+            <strong>Nouveau quiz</strong>
             <span className="dashboard-create-arrow" aria-hidden="true">→</span>
           </Link>
           <Link to="/activities/new?type=SONDAGE" className="dashboard-create-link">
             <span className="dashboard-create-icon dashboard-create-icon--poll" aria-hidden="true">
               <ActivitySymbol kind="poll" />
             </span>
-            <span><strong>Nouveau sondage</strong><small>Recueillez les avis.</small></span>
+            <strong>Nouveau sondage</strong>
             <span className="dashboard-create-arrow" aria-hidden="true">→</span>
           </Link>
         </div>

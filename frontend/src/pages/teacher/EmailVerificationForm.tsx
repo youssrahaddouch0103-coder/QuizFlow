@@ -48,13 +48,13 @@ export default function EmailVerificationForm({ pending, onUpdate, onRestart }: 
     <form className="card auth-card stack qf-auth__form" onSubmit={submit} aria-busy={busy}>
       <div className="brand"><Logo size={36} /> QuizFlow</div>
       <h1>Confirmez votre email</h1>
-      <p className="muted">Saisissez le code à 6 chiffres reçu par email. Pensez à vérifier les courriers indésirables.</p>
+      <p className="muted">Saisissez le code à 6 chiffres reçu par email.</p>
       <div aria-live="polite"><ErrorAlert message={error} />{notice && <p>{notice}</p>}</div>
       <div className="field">
         <label htmlFor="verification-code">Code de confirmation</label>
-        <input id="verification-code" className="input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} disabled={busy} onChange={e => setCode(e.target.value.replace(/[^0-9]/g, ''))} aria-describedby="verification-help" />
+        <input id="verification-code" className="input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} disabled={busy} onChange={e => setCode(e.target.value.replace(/[^0-9]/g, ''))} aria-describedby={expired ? 'verification-help' : undefined} />
       </div>
-      <p id="verification-help" className="muted small">{expired ? 'Le code a expiré. Demandez un nouveau code.' : 'Le code est personnel et ne peut être utilisé qu’une fois.'}</p>
+      {expired && <p id="verification-help" className="muted small">Le code a expiré. Demandez un nouveau code.</p>}
       <button className="btn btn-primary btn-block" disabled={busy || expired || code.length !== 6}>{busy ? 'Veuillez patienter…' : 'Confirmer mon email'}</button>
       <button type="button" className="btn btn-outline" disabled={busy || wait > 0} onClick={() => void resend()}>{wait > 0 ? `Renvoyer le code dans ${wait} s` : 'Renvoyer un code'}</button>
       <button type="button" className="btn btn-ghost" disabled={busy} onClick={onRestart}>Utiliser une autre adresse</button>

@@ -3,6 +3,8 @@
 export type ActivityType = 'QUIZ' | 'SONDAGE'
 export type ActivityStatus = 'BROUILLON' | 'PRETE' | 'ARCHIVEE'
 export type ChoiceMode = 'UNIQUE' | 'MULTIPLE'
+/** Type d'une question (voir ActivityEnums.QuestionKind côté Java). */
+export type QuestionKind = 'CHOIX' | 'NUAGE' | 'TEXTE' | 'NOTE' | 'CLASSEMENT' | 'QR' | 'IDEES'
 export type SessionState = 'EN_ATTENTE' | 'QUESTION_OUVERTE' | 'QUESTION_FERMEE' | 'TERMINEE' | 'ANNULEE'
 
 export interface Teacher {
@@ -29,6 +31,7 @@ export interface Question {
   id?: string
   position?: number
   text: string
+  kind?: QuestionKind
   choiceMode: ChoiceMode
   choices: Choice[]
 }
@@ -66,6 +69,7 @@ export interface QuestionLive {
   index: number
   total: number
   text: string
+  kind?: QuestionKind
   choiceMode: ChoiceMode
   choices: ChoiceLive[]
   /** Minuteur choisi par l'enseignant (absent = sans minuteur) */
@@ -81,11 +85,47 @@ export interface ClosedInfo {
   answerCount: number
 }
 
+export interface WordCount {
+  text: string
+  count: number
+}
+
+export interface RatingStats {
+  average?: number | null
+  /** Clés "1" à "5" */
+  distribution: Record<string, number>
+}
+
+export interface RankItem {
+  choiceId: string
+  label: string
+  averagePosition?: number | null
+}
+
+export interface ContributionView {
+  id: string
+  text: string
+  votes: number
+  done: boolean
+  hidden: boolean
+}
+
+export interface ContributionsUpdate {
+  questionId: string
+  contributions: ContributionView[]
+}
+
 export interface LiveStats {
   questionId: string
+  kind?: QuestionKind
   answerCount: number
   participantCount: number
   distribution: Record<string, number>
+  words?: WordCount[] | null
+  texts?: string[] | null
+  rating?: RatingStats | null
+  ranking?: RankItem[] | null
+  contributions?: ContributionView[] | null
 }
 
 export interface SessionSummary {
@@ -138,10 +178,16 @@ export interface QuestionResult {
   id: string
   position: number
   text: string
+  kind?: QuestionKind
   choiceMode?: ChoiceMode
   answerCount: number
   successRate?: number
   choices: ChoiceResult[]
+  words?: WordCount[] | null
+  texts?: string[] | null
+  rating?: RatingStats | null
+  ranking?: RankItem[] | null
+  contributions?: ContributionView[] | null
 }
 
 export interface ResultsView {
@@ -184,6 +230,11 @@ export interface PlayerState {
   closed?: ClosedInfo
   myAnswerCorrect?: boolean
   result?: MyResult
+  myText?: string | null
+  myValue?: number | null
+  contributions?: ContributionView[] | null
+  myVotes?: string[]
+  myContributions?: string[]
 }
 
 // ---------- IA ----------
@@ -251,6 +302,7 @@ export type LiveEventType =
   | 'QUESTION_CLOSED'
   | 'SESSION_ENDED'
   | 'SESSION_CANCELLED'
+  | 'CONTRIBUTIONS'
   | 'PARTICIPANT_JOINED'
   | 'ANSWER_STATS'
   | 'SESSION_RESULTS'

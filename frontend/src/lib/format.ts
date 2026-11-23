@@ -1,6 +1,22 @@
-import type { ActivityStatus, ActivityType, SessionState } from '../api/types'
+import type { ActivityStatus, ActivityType, QuestionKind, SessionState } from '../api/types'
 
 export const typeLabel: Record<ActivityType, string> = { QUIZ: 'Quiz', SONDAGE: 'Sondage' }
+
+export const kindLabel: Record<QuestionKind, string> = {
+  CHOIX: 'Choix',
+  NUAGE: 'Nuage de mots',
+  TEXTE: 'Texte libre',
+  NOTE: 'Note',
+  CLASSEMENT: 'Classement',
+  QR: 'Questions du public',
+  IDEES: 'Idées',
+}
+
+/** Le type utilise une liste de choix (réponses proposées ou éléments à classer). */
+export const usesChoices = (kind?: QuestionKind) => !kind || kind === 'CHOIX' || kind === 'CLASSEMENT'
+
+/** Les étudiants publient des contributions et votent. */
+export const isContribution = (kind?: QuestionKind) => kind === 'QR' || kind === 'IDEES'
 
 export const statusLabel: Record<ActivityStatus, string> = {
   BROUILLON: 'Brouillon',

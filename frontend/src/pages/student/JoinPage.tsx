@@ -10,7 +10,6 @@ import './JoinPage.css'
 
 // Le lecteur de QR (jsQR) n'est chargé que si l'élève choisit de scanner.
 const QrScanner = lazy(() => import('./QrScanner'))
-const Hero3D = lazy(() => import('../Hero3D'))
 
 /** W4 : l'étudiant saisit le code (ou arrive par le QR code), puis choisit un pseudo. */
 export default function JoinPage() {
@@ -84,12 +83,6 @@ export default function JoinPage() {
 
   return (
     <div className="auth-page join-page">
-      <div className="join-page__bg" aria-hidden="true">
-        <Suspense fallback={null}>
-          <Hero3D variant="full" />
-        </Suspense>
-        <span className="join-page__shade" />
-      </div>
       <Link to="/" className="join-page__back">
         ← Accueil
       </Link>
