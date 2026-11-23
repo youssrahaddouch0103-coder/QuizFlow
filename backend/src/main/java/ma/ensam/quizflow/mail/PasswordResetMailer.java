@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -19,7 +20,8 @@ public class PasswordResetMailer {
     private final EmailVerificationProperties properties;
     private final ThreadPoolTaskExecutor executor;
 
-    public PasswordResetMailer(ObjectProvider<JavaMailSender> sender, EmailVerificationProperties properties) {
+    public PasswordResetMailer(@Qualifier("verificationMailSender") ObjectProvider<JavaMailSender> sender,
+                               EmailVerificationProperties properties) {
         this.sender = sender.getIfAvailable();
         this.properties = properties;
         this.executor = new ThreadPoolTaskExecutor();

@@ -75,6 +75,7 @@ services:
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:5174
     ports:
