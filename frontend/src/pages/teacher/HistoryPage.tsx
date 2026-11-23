@@ -22,13 +22,12 @@ export default function HistoryPage() {
       <div className="page-head">
         <div>
           <h1>Historique des sessions</h1>
-          <p className="muted">Retrouvez les résultats de vos séances passées.</p>
         </div>
       </div>
       {sessions.length === 0 ? (
         <Empty>
           <p style={{ fontSize: '2rem' }}>🕓</p>
-          <p>Aucune session pour le moment. Lancez une activité depuis le tableau de bord.</p>
+          <p>Aucune session pour le moment.</p>
         </Empty>
       ) : (
         <div className="card" style={{ padding: 0, overflowX: 'auto' }}>

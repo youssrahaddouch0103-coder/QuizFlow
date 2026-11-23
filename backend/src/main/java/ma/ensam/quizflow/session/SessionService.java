@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ma.ensam.quizflow.activity.Activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 import ma.ensam.quizflow.activity.ActivityRepository;
 import ma.ensam.quizflow.activity.ActivityService;
 import ma.ensam.quizflow.common.ApiException;
@@ -53,11 +54,14 @@ public class SessionService {
     private final LiveSessionRegistry registry;
     private final ScoringService scoring;
     private final EventPublisher events;
+    private final ContributionRepository contributions;
 
     public SessionService(SessionRepository sessions, ParticipantRepository participants, AnswerRepository answers,
                           ParticipantResultRepository results, QuestionStatRepository questionStats,
                           ActivityService activityService, ActivityRepository activityRepository,
-                          LiveSessionRegistry registry, ScoringService scoring, EventPublisher events) {
+                          LiveSessionRegistry registry, ScoringService scoring, EventPublisher events,
+                          ContributionRepository contributions) {
+        this.contributions = contributions;
         this.sessions = sessions;
         this.participants = participants;
         this.answers = answers;
@@ -183,9 +187,10 @@ public class SessionService {
                     .toList();
             results.saveAll(rows);
         }
-        List<QuestionStat> stats = scoring.computeStats(snapshot.questions(), all, quiz).stream()
+        List<QuestionStat> stats = scoring.computeStats(snapshot.questions(), all,
+                        contributions.findBySessionId(sessionId), quiz).stream()
                 .map(s -> new QuestionStat(sessionId, s.questionId(), s.position(), s.answerCount(), s.successRate(),
-                        s.distribution()))
+                        s.distribution(), s.details()))
                 .toList();
         questionStats.saveAll(stats);
         registry.release(sessionId);
@@ -242,15 +247,71 @@ public class SessionService {
                 .filter(s -> s.getState() == SessionState.QUESTION_OUVERTE || s.getState() == SessionState.QUESTION_FERMEE)
                 .ifPresent(session -> {
                     Activity.Question question = registry.get(session).questionAt(session.getCurrentQuestionIndex());
-                    events.publishToTeacher(session.getCode(),
-                            LiveEvent.of(EventType.ANSWER_STATS, liveStats(session, question)));
+                    LiveStats stats = liveStats(session, question);
+                    events.publishToTeacher(session.getCode(), LiveEvent.of(EventType.ANSWER_STATS, stats));
+                    if (question.getKind().isContribution()) {
+                        // Les téléphones reçoivent la liste (sans les contributions masquées) pour pouvoir voter.
+                        events.publish(session.getCode(), LiveEvent.of(EventType.CONTRIBUTIONS,
+                                new ContributionsUpdate(question.getId(), publicContributions(session.getId(), question))));
+                    }
                 });
     }
+
+    /** Statistiques de la question en cours, selon son type. */
     public LiveStats liveStats(Session session, Activity.Question question) {
-        return new LiveStats(question.getId(),
-                answers.countBySessionIdAndQuestionId(session.getId(), question.getId()),
-                participants.countBySessionId(session.getId()),
-                liveDistribution(session.getId(), question));
+        UUID sessionId = session.getId();
+        long participantCount = participants.countBySessionId(sessionId);
+        QuestionKind kind = question.getKind();
+        if (kind == QuestionKind.CHOIX) {
+            return new LiveStats(question.getId(), kind,
+                    answers.countBySessionIdAndQuestionId(sessionId, question.getId()), participantCount,
+                    liveDistribution(sessionId, question), null, null, null, null, null);
+        }
+        if (kind.isContribution()) {
+            List<ContributionView> list = QuestionAggregates.contributions(
+                    contributions.findBySessionIdAndQuestionId(sessionId, question.getId()), true);
+            long visible = list.stream().filter(c -> !c.hidden()).count();
+            return new LiveStats(question.getId(), kind, visible, participantCount, Map.of(),
+                    null, null, null, null, list);
+        }
+        List<Answer> list = answers.findBySessionIdAndQuestionId(sessionId, question.getId());
+        return new LiveStats(question.getId(), kind, list.size(), participantCount, Map.of(),
+                kind == QuestionKind.NUAGE ? QuestionAggregates.words(list) : null,
+                kind == QuestionKind.TEXTE ? QuestionAggregates.texts(list) : null,
+                kind == QuestionKind.NOTE ? QuestionAggregates.rating(list) : null,
+                kind == QuestionKind.CLASSEMENT ? QuestionAggregates.ranking(question, list) : null,
+                null);
+    }
+
+    /** Contributions visibles par les étudiants (sans celles masquées par l'enseignant). */
+    public List<ContributionView> publicContributions(UUID sessionId, Activity.Question question) {
+        return QuestionAggregates.contributions(contributions.findBySessionIdAndQuestionId(sessionId, question.getId()), false);
+    }
+
+    /**
+     * Modération d'une question du public ou d'une idée : marquer comme traitée, ou masquer.
+     * Possible pendant la question en cours (ouverte ou fermée).
+     */
+    @Transactional
+    public LiveStats moderate(Long teacherId, UUID sessionId, UUID contributionId, Boolean done, Boolean hidden) {
+        Session session = findOwned(teacherId, sessionId);
+        if (session.getState() != SessionState.QUESTION_OUVERTE && session.getState() != SessionState.QUESTION_FERMEE) {
+            throw ApiException.invalidState("Aucune question en cours");
+        }
+        Contribution c = contributions.findById(contributionId)
+                .filter(x -> x.getSessionId().equals(sessionId) && x.getQuestionId().equals(session.getCurrentQuestionId()))
+                .orElseThrow(() -> ApiException.notFound("CONTRIBUTION_NOT_FOUND", "Contribution introuvable"));
+        if (done != null) {
+            c.setDone(done);
+        }
+        if (hidden != null) {
+            c.setHidden(hidden);
+        }
+        contributions.saveAndFlush(c);
+        Activity.Question question = registry.get(session).questionAt(session.getCurrentQuestionIndex());
+        events.publish(session.getCode(), LiveEvent.of(EventType.CONTRIBUTIONS,
+                new ContributionsUpdate(question.getId(), publicContributions(sessionId, question))));
+        return liveStats(session, question);
     }
 
     public ClosedInfo closedInfo(Session session, Activity.Question question) {
@@ -320,17 +381,21 @@ public class SessionService {
             Activity.Question q = questionsById.get(stat.getQuestionId());
             List<ChoiceResult> choices = new ArrayList<>();
             int total = stat.getAnswerCount();
-            if (q != null) {
+            if (q != null && q.getKind() == QuestionKind.CHOIX) {
                 for (Activity.Choice c : q.getChoices()) {
                     long count = stat.count(c.getId());
                     choices.add(new ChoiceResult(c.getId(), c.getLabel(), c.isCorrect(), count,
                             total == 0 ? 0.0 : 100.0 * count / total));
                 }
             }
+            QuestionDetails d = stat.getDetails() == null
+                    ? new QuestionDetails(null, null, null, null, null) : stat.getDetails();
             questionResults.add(new QuestionResult(stat.getQuestionId(), stat.getPosition(),
                     q == null ? "(question supprimée)" : q.getText(),
+                    q == null ? QuestionKind.CHOIX : q.getKind(),
                     q == null ? null : q.getChoiceMode(),
-                    total, stat.getSuccessRate(), choices));
+                    total, stat.getSuccessRate(), choices,
+                    d.words(), d.texts(), d.rating(), d.ranking(), d.contributions()));
         }
         return new ResultsView(summary(session), leaderboard, questionResults);
     }

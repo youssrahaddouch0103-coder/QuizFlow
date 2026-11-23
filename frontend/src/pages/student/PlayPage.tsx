@@ -1,17 +1,15 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { api } from '../../api/api'
+import { api, type AnswerPayload } from '../../api/api'
 import { ApiError, errorMessage } from '../../api/client'
-import type { LiveEvent, PlayerState, QuestionLive } from '../../api/types'
+import type { ContributionsUpdate, LiveEvent, PlayerState, QuestionLive } from '../../api/types'
 import { ChoiceLetter, ConnectionIndicator, ErrorAlert, Spinner } from '../../components/ui'
-import { percent } from '../../lib/format'
+import { isContribution, percent } from '../../lib/format'
 import { playerStore } from '../../lib/playerStore'
 import { useSessionChannel } from '../../realtime/useSessionChannel'
 import { CountdownRing } from '../../components/Timers'
 import { useCountdown } from '../../components/useCountdown'
-
-// Même fond 3D que la page d'accueil, chargé à part.
-const Hero3D = lazy(() => import('../Hero3D'))
+import { ContributionBoard, RankingAnswer, RatingAnswer, TextAnswer } from './PlayInputs'
 
 /** Écran de l'étudiant pendant la session (mobile d'abord). */
 export default function PlayPage() {
@@ -52,7 +50,14 @@ export default function PlayPage() {
         const question = event.payload as QuestionLive
         setSelected([])
         setError(null)
-        setState((s) => (s ? { ...s, state: 'QUESTION_OUVERTE', question, answered: false, myChoiceIds: [], closed: undefined, myAnswerCorrect: undefined } : s))
+        setState((s) =>
+          s
+            ? { ...s, state: 'QUESTION_OUVERTE', question, answered: false, myChoiceIds: [], closed: undefined, myAnswerCorrect: undefined, contributions: [], myVotes: [], myContributions: [] }
+            : s,
+        )
+      } else if (event.type === 'CONTRIBUTIONS') {
+        const update = event.payload as ContributionsUpdate
+        setState((s) => (s && s.question?.id === update.questionId ? { ...s, contributions: update.contributions } : s))
       } else if (event.type === 'QUESTION_CLOSED' || event.type === 'SESSION_ENDED') {
         void reload()
       } else if (event.type === 'SESSION_CANCELLED') {
@@ -74,13 +79,13 @@ export default function PlayPage() {
     else setSelected((sel) => (sel.includes(choiceId) ? sel.filter((x) => x !== choiceId) : [...sel, choiceId]))
   }
 
-  const submit = async () => {
-    if (!state?.question || selected.length === 0) return
+  const send = async (payload: AnswerPayload) => {
+    if (!state?.question) return
     setSending(true)
     setError(null)
     try {
-      await api.answer(code, identity.token, state.question.id, selected)
-      setState((s) => (s ? { ...s, answered: true, myChoiceIds: selected } : s))
+      await api.answer(code, identity.token, state.question.id, payload)
+      setState((s) => (s ? { ...s, answered: true, myChoiceIds: payload.choiceIds ?? [] } : s))
     } catch (e) {
       if (e instanceof ApiError && (e.code === 'ALREADY_ANSWERED' || e.code === 'QUESTION_CLOSED')) void reload()
       setError(errorMessage(e))
@@ -89,14 +94,51 @@ export default function PlayPage() {
     }
   }
 
+  const submit = () => {
+    if (selected.length > 0) void send({ choiceIds: selected })
+  }
+
+  /** Questions du public et idées : renvoie true si la contribution a été publiée. */
+  const post = async (text: string) => {
+    if (!state?.question) return false
+    setSending(true)
+    setError(null)
+    try {
+      const c = await api.contribute(code, identity.token, state.question.id, text)
+      setState((s) =>
+        s
+          ? {
+              ...s,
+              myContributions: [...(s.myContributions ?? []), c.id],
+              contributions: s.contributions?.some((x) => x.id === c.id) ? s.contributions : [...(s.contributions ?? []), c],
+            }
+          : s,
+      )
+      return true
+    } catch (e) {
+      setError(errorMessage(e))
+      return false
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const vote = async (contributionId: string) => {
+    setError(null)
+    try {
+      const { voted } = await api.vote(code, identity.token, contributionId)
+      setState((s) => {
+        if (!s) return s
+        const votes = (s.myVotes ?? []).filter((id) => id !== contributionId)
+        return { ...s, myVotes: voted ? [...votes, contributionId] : votes }
+      })
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
   return (
     <div className="player">
-      <div className="player-bg" aria-hidden="true">
-        <Suspense fallback={null}>
-          <Hero3D variant="full" />
-        </Suspense>
-        <span className="player-bg__veil" />
-      </div>
       <div className="player-top">
         <span>👤 {identity.pseudo}</span>
         <span className="muted small">{state?.title}</span>
@@ -110,7 +152,17 @@ export default function PlayPage() {
           </div>
         )}
         {state && (
-          <PlayerContent state={state} selected={selected} sending={sending} secondsLeft={secondsLeft} onToggle={toggle} onSubmit={submit} />
+          <PlayerContent
+            state={state}
+            selected={selected}
+            sending={sending}
+            secondsLeft={secondsLeft}
+            onToggle={toggle}
+            onSubmit={submit}
+            onSend={send}
+            onPost={post}
+            onVote={vote}
+          />
         )}
       </div>
     </div>
@@ -124,9 +176,12 @@ interface ContentProps {
   secondsLeft: number | null
   onToggle: (id: string) => void
   onSubmit: () => void
+  onSend: (payload: AnswerPayload) => void
+  onPost: (text: string) => Promise<boolean>
+  onVote: (id: string) => void
 }
 
-function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubmit }: ContentProps) {
+function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubmit, onSend, onPost, onVote }: ContentProps) {
   const q = state.question
   const timeUp = secondsLeft === 0
   const ring = secondsLeft !== null && q?.durationSeconds ? <CountdownRing seconds={secondsLeft} total={q.durationSeconds} size={56} /> : null
@@ -142,17 +197,55 @@ function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubm
     )
   }
 
+  const kind = q?.kind ?? 'CHOIX'
+  const head = q && (
+    <>
+      <div className="player-question-head">
+        <span className="badge badge-primary">
+          Question {q.index + 1} / {q.total}
+          {kind === 'CHOIX' && q.choiceMode === 'MULTIPLE' ? ' · plusieurs réponses' : ''}
+        </span>
+        {ring}
+      </div>
+      <div className="player-question">{q.text}</div>
+    </>
+  )
+
+  // Questions du public et idées : on reste sur la liste, ouverte puis en lecture seule.
+  if ((state.state === 'QUESTION_OUVERTE' || state.state === 'QUESTION_FERMEE') && q && isContribution(kind)) {
+    return (
+      <>
+        {head}
+        <ContributionBoard
+          key={q.id}
+          kind={kind}
+          contributions={state.contributions ?? []}
+          myVotes={state.myVotes ?? []}
+          mine={state.myContributions ?? []}
+          open={state.state === 'QUESTION_OUVERTE' && !timeUp}
+          sending={sending}
+          onPost={onPost}
+          onVote={onVote}
+        />
+      </>
+    )
+  }
+
+  if (state.state === 'QUESTION_OUVERTE' && q && !state.answered && kind !== 'CHOIX') {
+    return (
+      <>
+        {head}
+        {(kind === 'NUAGE' || kind === 'TEXTE') && <TextAnswer key={q.id} kind={kind} disabled={timeUp} sending={sending} onSubmit={(text) => onSend({ text })} />}
+        {kind === 'NOTE' && <RatingAnswer key={q.id} disabled={timeUp} sending={sending} onSubmit={(value) => onSend({ value })} />}
+        {kind === 'CLASSEMENT' && <RankingAnswer key={q.id} choices={q.choices} disabled={timeUp} sending={sending} onSubmit={(order) => onSend({ choiceIds: order })} />}
+      </>
+    )
+  }
+
   if (state.state === 'QUESTION_OUVERTE' && q && !state.answered) {
     return (
       <>
-        <div className="player-question-head">
-          <span className="badge badge-primary">
-            Question {q.index + 1} / {q.total}
-            {q.choiceMode === 'MULTIPLE' ? ' · plusieurs réponses' : ''}
-          </span>
-          {ring}
-        </div>
-        <div className="player-question">{q.text}</div>
+        {head}
         <div className="stack" style={{ gap: 10 }}>
           {q.choices.map((c, i) => (
             <button key={c.id} className={`answer-btn ${selected.includes(c.id) ? 'selected' : ''}`} disabled={timeUp} onClick={() => onToggle(c.id)}>
@@ -179,9 +272,20 @@ function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubm
     )
   }
 
+  if (state.state === 'QUESTION_FERMEE' && q && kind !== 'CHOIX') {
+    return (
+      <div className="player-center">
+        <div className="big-emoji">{state.answered ? '✅' : '⏱️'}</div>
+        <h2>{state.answered ? 'Merci pour votre réponse !' : 'Pas de réponse'}</h2>
+        <p className="muted small">Prochaine question dans un instant…</p>
+      </div>
+    )
+  }
+
   if (state.state === 'QUESTION_FERMEE' && q) {
     const closed = state.closed
-    const quiz = state.type === 'QUIZ'
+    // Question notée : elle a au moins une bonne réponse.
+    const quiz = state.type === 'QUIZ' && (state.closed?.correctChoiceIds.length ?? 0) > 0
     const total = closed?.answerCount ?? 0
     let headline = 'Merci pour votre réponse !'
     let emoji = '📊'
@@ -233,7 +337,7 @@ function PlayerContent({ state, selected, sending, secondsLeft, onToggle, onSubm
       <div className="player-center">
         <div className="big-emoji">🏁</div>
         <h2>Session terminée</h2>
-        {r ? (
+        {r && r.questionCount > 0 ? (
           <>
             <p style={{ fontSize: '2.4rem', fontWeight: 800 }}>
               {r.score} / {r.questionCount}

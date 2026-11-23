@@ -20,6 +20,8 @@ export default function TeacherLayout() {
             <NavLink to="/dashboard">Activités</NavLink>
             <NavLink to="/history">Historique</NavLink>
           </nav>
+          {/* Emplacement pour les actions d'une page (ex. éditeur : retour, Enregistrer, Lancer). */}
+          <div id="header-actions" className="header-actions" />
           <div className="user-menu">
             <span className="muted">{teacher.displayName}</span>
             <button className="btn btn-outline btn-sm" onClick={logout}>

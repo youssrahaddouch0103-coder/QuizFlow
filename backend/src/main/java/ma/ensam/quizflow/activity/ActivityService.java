@@ -7,6 +7,7 @@ import ma.ensam.quizflow.activity.ActivityDtos.QuestionRequest;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityStatus;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 import ma.ensam.quizflow.common.ApiException;
 import ma.ensam.quizflow.session.SessionRepository;
 import org.springframework.stereotype.Service;
@@ -82,7 +83,7 @@ public class ActivityService {
             List<Activity.Choice> choices = q.getChoices().stream()
                     .map(c -> new Activity.Choice(newId(), c.getPosition(), c.getLabel(), c.isCorrect()))
                     .toList();
-            questions.add(new Activity.Question(newId(), q.getPosition(), q.getText(), q.getChoiceMode(),
+            questions.add(new Activity.Question(newId(), q.getPosition(), q.getText(), q.getKind(), q.getChoiceMode(),
                     new ArrayList<>(choices)));
         }
         copy.setQuestions(questions);
@@ -139,22 +140,26 @@ public class ActivityService {
     }
 
     private void apply(Activity a, ActivityRequest req) {
-        a.setType(req.type());
+        // Quiz : questions à choix notées. Sondage : tous les types de questions, sans bonne réponse.
+        a.setType(req.type() == null ? ActivityType.QUIZ : req.type());
+        boolean poll = a.getType() == ActivityType.SONDAGE;
         a.setTitle(trim(req.title()));
         a.setDescription(trim(req.description()));
-        boolean poll = req.type() == ActivityType.SONDAGE;
         List<Activity.Question> questions = new ArrayList<>();
         List<QuestionRequest> qReqs = req.questions() == null ? List.of() : req.questions();
         for (int i = 0; i < qReqs.size(); i++) {
             QuestionRequest qr = qReqs.get(i);
+            QuestionKind kind = qr.kind() == null ? QuestionKind.CHOIX : qr.kind();
             List<Activity.Choice> choices = new ArrayList<>();
-            List<ChoiceRequest> cReqs = qr.choices() == null ? List.of() : qr.choices();
+            // Seuls les choix et le classement gardent une liste ; seule une question à choix a des bonnes réponses.
+            List<ChoiceRequest> cReqs = qr.choices() == null || !kind.usesChoices() ? List.of() : qr.choices();
+            boolean graded = !poll && kind == QuestionKind.CHOIX;
             for (int j = 0; j < cReqs.size(); j++) {
                 ChoiceRequest cr = cReqs.get(j);
-                choices.add(new Activity.Choice(idOrNew(cr.id()), j + 1, trim(cr.label()), !poll && cr.correct()));
+                choices.add(new Activity.Choice(idOrNew(cr.id()), j + 1, trim(cr.label()), graded && cr.correct()));
             }
-            ChoiceMode mode = qr.choiceMode() == null ? ChoiceMode.UNIQUE : qr.choiceMode();
-            questions.add(new Activity.Question(idOrNew(qr.id()), i + 1, trim(qr.text()), mode, choices));
+            ChoiceMode mode = qr.choiceMode() == null || kind != QuestionKind.CHOIX ? ChoiceMode.UNIQUE : qr.choiceMode();
+            questions.add(new Activity.Question(idOrNew(qr.id()), i + 1, trim(qr.text()), kind, mode, choices));
         }
         a.setQuestions(questions);
         a.setStatus(computeStatus(a));
