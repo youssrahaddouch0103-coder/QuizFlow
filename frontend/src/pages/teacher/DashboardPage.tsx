@@ -6,6 +6,7 @@ import type { Activity, ActivityStatus, SessionSummary } from '../../api/types'
 import { ErrorAlert, PageLoader, StateBadge } from '../../components/ui'
 import ActivityCard from './ActivityCard'
 import ActivitySymbol from '../../components/ActivitySymbol'
+import MicrosoftTutorial from '../../components/MicrosoftTutorial'
 import DashboardEmptyState from './DashboardEmptyState'
 import './DashboardPage.css'
 
@@ -33,6 +34,7 @@ export default function DashboardPage() {
   const [loadError, setLoadError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
+  const [tutorial, setTutorial] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -129,6 +131,11 @@ export default function DashboardPage() {
             <strong>Nouveau sondage</strong>
             <span className="dashboard-create-arrow" aria-hidden="true">→</span>
           </Link>
+          <button type="button" className="dashboard-ms-btn" onClick={() => setTutorial(true)}>
+            <span className="mt-app mt-app--ppt" aria-hidden="true">P</span>
+            <span className="mt-app mt-app--teams" aria-hidden="true">T</span>
+            PowerPoint et Teams
+          </button>
         </div>
       </header>
 
@@ -252,6 +259,7 @@ export default function DashboardPage() {
           })}
         </div>
       )}
+      <MicrosoftTutorial open={tutorial} onClose={() => setTutorial(false)} />
     </div>
   )
 }

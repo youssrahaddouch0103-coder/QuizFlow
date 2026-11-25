@@ -9,18 +9,18 @@
 .editor-questions-heading h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
 .editor-questions-heading h2 span { display: grid; place-items: center; min-width: 26px; height: 26px; border-radius: 8px; color: var(--primary); background: var(--accent-soft); font-size: .8rem; }
 .activity-editor .question-card { border-left: 1px solid var(--border); padding: 0; overflow: hidden; }
-.activity-editor .question-head { background: #f7f9f5; padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.activity-editor .question-head { background: var(--field); padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .activity-editor .question-number { color: var(--primary); font-size: .9rem; }
 .activity-editor .question-card > .stack { padding: 22px; }
 .editor-field-label { font-weight: 650; font-size: .9rem; }
-.activity-editor .question-card textarea { background: #fbfcfa; min-height: 100px !important; }
-.activity-editor .choice-row { padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: #fbfcfa; }
-.activity-editor .choice-row .input { min-width: 0; background: #fff; }
-.activity-editor .editor-choice-correct { border-color: #a3d1b8; background: #f0f9f4; }
+.activity-editor .question-card textarea { background: var(--field); min-height: 100px !important; }
+.activity-editor .choice-row { padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); }
+.activity-editor .choice-row .input { min-width: 0; background: var(--surface); }
+.activity-editor .editor-choice-correct { border-color: var(--good-border); background: var(--good-bg); }
 .activity-editor .correct-toggle { padding: 8px 4px; }
-.activity-editor .correct-toggle input { accent-color: #26744b; width: 17px; height: 17px; }
+.activity-editor .correct-toggle input { accent-color: var(--success); width: 17px; height: 17px; }
 .activity-editor .editor-add-question { min-height: 64px; border: 1px dashed var(--border-strong); background: var(--accent-soft); color: var(--primary); }
-.activity-editor .editor-add-question:hover { background: #e2eed1; }
+.activity-editor .editor-add-question:hover { background: var(--accent-soft); }
 .activity-editor .editor-save-bottom { align-self: flex-end; min-width: 200px; }
 .activity-editor .editor-help { box-shadow: none; background: var(--surface-2); border-color: transparent; }
 .activity-editor :is(button, a, input, textarea, select):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
