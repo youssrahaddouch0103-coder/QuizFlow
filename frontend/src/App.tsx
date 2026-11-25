@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TeacherLayout from './components/TeacherLayout'
 import LandingPage from './pages/LandingPage'
@@ -12,6 +13,11 @@ import LiveSessionPage from './pages/teacher/LiveSessionPage'
 import ResultsPage from './pages/teacher/ResultsPage'
 import { useAuth } from './auth/AuthContext'
 import { PageLoader } from './components/ui'
+
+// Pages pour PowerPoint et Teams : chargées seulement quand on les ouvre.
+const OfficePage = lazy(() => import('./pages/embed/OfficePage'))
+const TeamsPage = lazy(() => import('./pages/embed/TeamsPage'))
+const TeamsConfigPage = lazy(() => import('./pages/embed/TeamsConfigPage'))
 
 function RequireTeacher({ children }: { children: React.ReactNode }) {
   const { teacher, loading } = useAuth()
@@ -49,6 +55,11 @@ export default function App() {
         <Route path="/activities/:id/edit" element={<ActivityEditorPage />} />
         <Route path="/sessions/:id/results" element={<ResultsPage />} />
       </Route>
+
+      {/* Microsoft : complément PowerPoint et application Teams */}
+      <Route path="/office" element={<Suspense fallback={<PageLoader />}><OfficePage /></Suspense>} />
+      <Route path="/teams" element={<Suspense fallback={<PageLoader />}><TeamsPage /></Suspense>} />
+      <Route path="/teams/config" element={<Suspense fallback={<PageLoader />}><TeamsConfigPage /></Suspense>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

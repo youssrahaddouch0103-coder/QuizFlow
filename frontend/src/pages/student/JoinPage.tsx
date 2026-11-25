@@ -6,6 +6,7 @@ import type { PublicSessionInfo } from '../../api/types'
 import { ErrorAlert, Logo, Spinner } from '../../components/ui'
 import { playerStore } from '../../lib/playerStore'
 import { typeLabel } from '../../lib/format'
+import ThemeToggle from '../../components/ThemeToggle'
 import './JoinPage.css'
 
 // Le lecteur de QR (jsQR) n'est chargé que si l'élève choisit de scanner.
@@ -83,6 +84,7 @@ export default function JoinPage() {
 
   return (
     <div className="auth-page join-page">
+      <ThemeToggle className="theme-toggle--corner" />
       <Link to="/" className="join-page__back">
         ← Accueil
       </Link>

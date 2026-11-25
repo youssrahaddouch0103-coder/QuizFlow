@@ -1,5 +1,5 @@
 /* Page « Rejoindre une session » : fond marine, carte blanche au centre */
-.auth-page.join-page { position: relative; overflow: hidden; isolation: isolate; background: var(--primary); }
+.auth-page.join-page { position: relative; overflow: hidden; isolation: isolate; background: var(--brand); }
 .join-page .auth-card { position: relative; box-shadow: 0 30px 70px -30px #05090f; }
 .join-page__back { position: absolute; top: 18px; left: 20px; color: var(--on-dark-muted); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
 .join-page__back:hover { color: #fff; }
