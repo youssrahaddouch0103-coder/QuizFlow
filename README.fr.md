@@ -43,6 +43,10 @@ même adresse. Le QR code pointe alors vers une URL que les téléphones peuvent
 
 Sans clé d'API, le service IA fonctionne en mode `mock` (questions de démonstration) : toute la chaîne reste testable.
 
+## PowerPoint et Teams
+
+QuizFlow peut se lancer depuis une diapositive PowerPoint ou dans une réunion Teams : voir [microsoft/README.md](microsoft/README.md).
+
 ## Développer
 
 Lancer seulement les bases et l'IA dans Docker, puis le backend et le frontend en local (rechargement à chaud) :
