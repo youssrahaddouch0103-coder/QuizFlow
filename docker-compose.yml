@@ -77,7 +77,8 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:5174
+      # https://localhost:3443 : complément PowerPoint ; *.trycloudflare.com : tunnel pour Teams (voir microsoft/README.md)
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:5174,https://localhost:3443,https://*.trycloudflare.com
     ports:
       - "8081:8081"
 
@@ -87,6 +88,10 @@ services:
       - backend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
+      # HTTPS pour le complément PowerPoint : actif seulement si le dossier certs/ contient un certificat.
+      - "${FRONTEND_HTTPS_PORT:-3443}:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
 
 volumes:
   pg-data:

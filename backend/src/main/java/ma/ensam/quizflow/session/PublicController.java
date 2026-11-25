@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 /** API publique (étudiants anonymes, sans compte). */
 @RestController
@@ -52,5 +53,21 @@ public class PublicController {
                                        @Valid @RequestBody AnswerRequest req) {
         players.submit(code.toUpperCase(), token, req);
         return Map.of("accepted", true);
+    }
+
+    /** Questions du public et idées : publier une contribution. */
+    @PostMapping("/sessions/{code}/contributions")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ContributionView contribute(@PathVariable String code,
+                                       @RequestHeader(value = TOKEN_HEADER, required = false) String token,
+                                       @Valid @RequestBody ContributionRequest req) {
+        return players.contribute(code.toUpperCase(), token, req);
+    }
+
+    /** Vote pour une contribution (un second appel retire le vote). */
+    @PostMapping("/sessions/{code}/contributions/{id}/vote")
+    public Map<String, Boolean> vote(@PathVariable String code, @PathVariable UUID id,
+                                     @RequestHeader(value = TOKEN_HEADER, required = false) String token) {
+        return Map.of("voted", players.vote(code.toUpperCase(), token, id));
     }
 }

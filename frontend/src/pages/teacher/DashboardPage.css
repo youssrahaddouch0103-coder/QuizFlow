@@ -12,39 +12,9 @@
   gap: 20px;
   align-items: center;
   margin-bottom: 0;
-  padding: clamp(16px, 3vw, 26px) clamp(18px, 3.5vw, 32px);
+  padding: 14px;
   color: #fff;
-  background: var(--primary);
-}
-
-.dashboard-hero-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
-  gap: clamp(20px, 4vw, 48px);
-  align-items: center;
-}
-
-.dashboard-hero-hint {
-  margin-top: 12px;
-  padding-left: 12px;
-  border-left: 3px solid var(--accent);
-  color: var(--on-dark-muted);
-  max-width: 420px;
-}
-
-@media (max-width: 860px) {
-  .dashboard-hero-top { grid-template-columns: minmax(0, 1fr); }
-}
-
-.dashboard-heading h1 {
-  margin: 4px 0 8px;
-  font-size: clamp(1.65rem, 3.5vw, 2.15rem);
-}
-
-.dashboard-greeting {
-  color: var(--on-dark-muted);
-  font-weight: 700;
-  overflow-wrap: anywhere;
+  background: var(--brand);
 }
 
 .dashboard-page .dashboard-sessions {
@@ -71,15 +41,15 @@
 }
 
 .dashboard-card-note {
-  color: #805000;
+  color: var(--warning);
 }
 
 .dashboard-card .badge-warning {
-  color: #805000;
+  color: var(--warning);
 }
 
 .dashboard-card .badge-success {
-  color: #17633a;
+  color: var(--success);
 }
 
 .dashboard-page .dashboard-empty {
@@ -114,7 +84,7 @@
 .dashboard-notice {
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  color: #17633a;
+  color: var(--success);
   background: var(--success-soft);
 }
 
@@ -125,7 +95,7 @@
 
 .dashboard-create {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 16px;
 }
 
@@ -133,10 +103,10 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border: 2px solid transparent;
   border-radius: 16px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   text-decoration: none;
 }
@@ -146,21 +116,15 @@
   background: var(--accent-soft);
 }
 
-.dashboard-create-link strong,
-.dashboard-create-link small {
-  display: block;
-}
-
-.dashboard-create-link small {
-  margin-top: 4px;
-  color: var(--muted);
+.dashboard-create-link strong {
+  font-size: 1.05rem;
 }
 
 .dashboard-create-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 52px;
-  height: 52px;
+  flex: 0 0 44px;
+  height: 44px;
   border-radius: 15px;
   color: var(--primary);
   background: var(--accent-soft);
@@ -168,13 +132,13 @@
 
 .dashboard-create-icon--poll {
   --symbol-accent: #b5dfd0;
-  color: #17634f;
-  background: #e2f4ee;
+  color: var(--teal);
+  background: var(--teal-soft);
 }
 
 .dashboard-create-icon svg {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
 }
 
 .dashboard-create-arrow {
@@ -211,7 +175,7 @@
   margin-left: 4px;
   padding: 1px 5px;
   border-radius: 6px;
-  background: rgba(27, 42, 74, .08);
+  background: var(--primary-soft);
   font-size: .75rem;
 }
 
@@ -261,4 +225,31 @@
   .dashboard-page :is(.btn, .tabs button) {
     min-height: 44px;
   }
+}
+
+/* Bouton du tutoriel PowerPoint / Teams (dans le bandeau bleu) */
+.dashboard-ms-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px solid #ffffff40;
+  border-radius: 16px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dashboard-ms-btn:hover { background: #ffffff1a; }
+.dashboard-ms-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dashboard-ms-btn .mt-app:last-of-type { margin-right: 4px; }
+@media (max-width: 900px) {
+  .dashboard-create { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-ms-btn { grid-column: 1 / -1; justify-content: center; padding: 8px 14px; }
+}
+@media (max-width: 600px) {
+  .dashboard-create { grid-template-columns: minmax(0, 1fr); }
 }

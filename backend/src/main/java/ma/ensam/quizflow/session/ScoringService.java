@@ -1,6 +1,7 @@
 package ma.ensam.quizflow.session;
 
 import ma.ensam.quizflow.activity.Activity;
+import ma.ensam.quizflow.activity.ActivityEnums;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -18,10 +19,13 @@ public class ScoringService {
 
     /** Statistiques d'une question. */
     public record Stats(String questionId, int position, int answerCount, Double successRate,
-                        Map<String, Long> distribution) {}
+                        Map<String, Long> distribution, SessionDtos.QuestionDetails details) {}
 
     /** Choix multiple en tout ou rien : la réponse est juste si l'ensemble choisi = l'ensemble des bonnes réponses. */
     public boolean isCorrect(Activity.Question question, Set<String> choiceIds) {
+        if (question.getKind() != ActivityEnums.QuestionKind.CHOIX) {
+            return false;
+        }
         Set<String> expected = question.getChoices().stream()
                 .filter(Activity.Choice::isCorrect)
                 .map(Activity.Choice::getId)
@@ -59,22 +63,50 @@ public class ScoringService {
 
     /** Statistiques de chaque question de l'activité, à partir de toutes les réponses de la session. */
     public List<Stats> computeStats(List<Activity.Question> questions, Collection<Answer> answers, boolean quiz) {
+        return computeStats(questions, answers, List.of(), quiz);
+    }
+
+    /**
+     * Statistiques de chaque question. Le taux de réussite n'existe que pour une question à choix d'un quiz ;
+     * les autres types ont leurs résultats dans « details ».
+     */
+    public List<Stats> computeStats(List<Activity.Question> questions, Collection<Answer> answers,
+                                    Collection<Contribution> contributions, boolean quiz) {
         Map<String, List<Answer>> byQuestion = answers.stream()
                 .collect(Collectors.groupingBy(Answer::getQuestionId));
+        Map<String, List<Contribution>> contributionsByQuestion = contributions.stream()
+                .collect(Collectors.groupingBy(Contribution::getQuestionId));
         List<Stats> stats = new ArrayList<>();
         for (Activity.Question q : questions) {
             List<Answer> list = byQuestion.getOrDefault(q.getId(), List.of());
             Map<String, Long> distribution = new LinkedHashMap<>();
-            q.getChoices().forEach(c -> distribution.put(c.getId(), 0L));
-            for (Answer a : list) {
-                a.getChoiceIds().forEach(cid -> distribution.merge(cid, 1L, Long::sum));
+            SessionDtos.QuestionDetails details = null;
+            int count = list.size();
+            switch (q.getKind()) {
+                case CHOIX -> {
+                    q.getChoices().forEach(c -> distribution.put(c.getId(), 0L));
+                    for (Answer a : list) {
+                        a.getChoiceIds().forEach(cid -> distribution.merge(cid, 1L, Long::sum));
+                    }
+                }
+                case NUAGE -> details = new SessionDtos.QuestionDetails(QuestionAggregates.words(list), null, null, null, null);
+                case TEXTE -> details = new SessionDtos.QuestionDetails(null, QuestionAggregates.texts(list), null, null, null);
+                case NOTE -> details = new SessionDtos.QuestionDetails(null, null, QuestionAggregates.rating(list), null, null);
+                case CLASSEMENT -> details = new SessionDtos.QuestionDetails(null, null, null,
+                        QuestionAggregates.ranking(q, list), null);
+                case QR, IDEES -> {
+                    List<Contribution> mine = contributionsByQuestion.getOrDefault(q.getId(), List.of());
+                    count = (int) mine.stream().filter(c -> !c.isHidden()).count();
+                    details = new SessionDtos.QuestionDetails(null, null, null, null,
+                            QuestionAggregates.contributions(mine, false));
+                }
             }
             Double successRate = null;
-            if (quiz) {
+            if (quiz && ma.ensam.quizflow.activity.ActivityValidator.isGraded(q)) {
                 long correct = list.stream().filter(a -> Boolean.TRUE.equals(a.getCorrect())).count();
                 successRate = list.isEmpty() ? 0.0 : (double) correct / list.size();
             }
-            stats.add(new Stats(q.getId(), q.getPosition(), list.size(), successRate, distribution));
+            stats.add(new Stats(q.getId(), q.getPosition(), count, successRate, distribution, details));
         }
         return stats;
     }

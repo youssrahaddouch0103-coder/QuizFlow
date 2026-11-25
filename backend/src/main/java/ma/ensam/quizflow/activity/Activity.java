@@ -3,6 +3,7 @@ package ma.ensam.quizflow.activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityStatus;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -33,6 +34,8 @@ public class Activity {
         private String id;
         private int position;
         private String text;
+        /** Absent dans les activités créées avant l'ajout des types : vaut alors CHOIX. */
+        private QuestionKind kind;
         private ChoiceMode choiceMode = ChoiceMode.UNIQUE;
         private List<Choice> choices = new ArrayList<>();
 
@@ -40,9 +43,15 @@ public class Activity {
         }
 
         public Question(String id, int position, String text, ChoiceMode choiceMode, List<Choice> choices) {
+            this(id, position, text, QuestionKind.CHOIX, choiceMode, choices);
+        }
+
+        public Question(String id, int position, String text, QuestionKind kind, ChoiceMode choiceMode,
+                        List<Choice> choices) {
             this.id = id;
             this.position = position;
             this.text = text;
+            this.kind = kind;
             this.choiceMode = choiceMode;
             this.choices = choices;
         }
@@ -53,6 +62,8 @@ public class Activity {
         public void setPosition(int position) { this.position = position; }
         public String getText() { return text; }
         public void setText(String text) { this.text = text; }
+        public QuestionKind getKind() { return kind == null ? QuestionKind.CHOIX : kind; }
+        public void setKind(QuestionKind kind) { this.kind = kind; }
         public ChoiceMode getChoiceMode() { return choiceMode; }
         public void setChoiceMode(ChoiceMode choiceMode) { this.choiceMode = choiceMode; }
         public List<Choice> getChoices() { return choices; }

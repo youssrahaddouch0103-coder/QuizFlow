@@ -14,6 +14,7 @@ public record LiveEvent(EventType type, Object payload, Instant at) {
         QUESTION_CLOSED,
         SESSION_ENDED,
         SESSION_CANCELLED,
+        CONTRIBUTIONS,
         // Canal enseignant /topic/sessions/{code}/teacher
         PARTICIPANT_JOINED,
         ANSWER_STATS,

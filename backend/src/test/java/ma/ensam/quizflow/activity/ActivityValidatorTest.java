@@ -2,6 +2,7 @@ package ma.ensam.quizflow.activity;
 
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -74,5 +75,43 @@ class ActivityValidatorTest {
         a.setType(ActivityType.QUIZ);
         a.setTitle("Vide");
         assertThat(ActivityValidator.validate(a)).containsExactly("Ajoutez au moins une question");
+    }
+
+    private static Activity withQuestion(QuestionKind kind, Activity.Choice... choices) {
+        Activity a = new Activity();
+        a.setType(ActivityType.SONDAGE);
+        a.setTitle("Séance");
+        a.setQuestions(new ArrayList<>(List.of(new Activity.Question("q1", 1, "Votre avis ?", kind, ChoiceMode.UNIQUE,
+                new ArrayList<>(List.of(choices))))));
+        return a;
+    }
+
+    @Test
+    void openKindsOnlyNeedATextInAPoll() {
+        for (QuestionKind kind : List.of(QuestionKind.NUAGE, QuestionKind.TEXTE, QuestionKind.NOTE,
+                QuestionKind.QR, QuestionKind.IDEES)) {
+            assertThat(ActivityValidator.validate(withQuestion(kind))).as(kind.name()).isEmpty();
+        }
+    }
+
+    @Test
+    void rankingNeedsTwoToSixItemsButNoCorrectAnswer() {
+        assertThat(ActivityValidator.validate(withQuestion(QuestionKind.CLASSEMENT, choice("A", false))))
+                .anyMatch(e -> e.contains("éléments"));
+        assertThat(ActivityValidator.validate(withQuestion(QuestionKind.CLASSEMENT, choice("A", false), choice("B", false))))
+                .isEmpty();
+    }
+
+    @Test
+    void quizOnlyAcceptsChoiceQuestions() {
+        Activity a = withQuestion(QuestionKind.NUAGE);
+        a.setType(ActivityType.QUIZ);
+        assertThat(ActivityValidator.validate(a)).anyMatch(e -> e.contains("réservé aux sondages"));
+    }
+
+    @Test
+    void questionWithoutKindIsAChoiceQuestion() {
+        Activity.Question q = new Activity.Question();
+        assertThat(q.getKind()).isEqualTo(QuestionKind.CHOIX);
     }
 }

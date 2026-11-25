@@ -1,16 +1,17 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { errorMessage, tokenStore } from '../../api/client'
 import type { LiveEvent, LiveStats, ParticipantJoinedPayload, ResultsView, TeacherSessionView } from '../../api/types'
+import { KindResults } from '../../components/KindResults'
+import { isContribution } from '../../lib/format'
 import { ConnectionIndicator, ErrorAlert, Logo, PageLoader, ResultBars, StateBadge } from '../../components/ui'
 import { CountdownRing, SessionClock } from '../../components/Timers'
 import { useCountdown } from '../../components/useCountdown'
 import { useSessionChannel } from '../../realtime/useSessionChannel'
 
 // Fond 3D de l'écran projeté, chargé à part.
-const Hero3D = lazy(() => import('../Hero3D'))
 
 const TIMER_OPTIONS = [0, 10, 20, 30, 45, 60, 90, 120]
 const AUTO_NEXT_DELAY = 6 // secondes d'affichage de la correction avant la question suivante
@@ -184,6 +185,17 @@ export default function LiveSessionPage() {
   const answerCount = (closed ? view.closed?.answerCount : view.stats?.answerCount) ?? 0
   const correctIds = view.closed?.correctChoiceIds ?? []
   const running = view.state === 'QUESTION_OUVERTE' || view.state === 'QUESTION_FERMEE'
+  const kind = q?.kind ?? 'CHOIX'
+  const contribution = isContribution(kind)
+  const countLabel = kind === 'QR' ? 'questions' : kind === 'IDEES' ? 'idées' : 'réponses'
+  const moderate = async (contributionId: string, change: { done?: boolean; hidden?: boolean }) => {
+    try {
+      const stats = await api.moderate(view.id, contributionId, change)
+      setView((v) => (v ? { ...v, stats } : v))
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
 
   goNextRef.current = () => void act(() => api.nextQuestion(view.id, timerArg))
 
@@ -214,13 +226,6 @@ export default function LiveSessionPage() {
 
   return (
     <div className="presenter">
-      <div className="presenter-bg" aria-hidden="true">
-        <Suspense fallback={null}>
-          {/* Chaque nouvelle réponse ou arrivée fait réagir les objets. */}
-          <Hero3D variant="presenter" pulse={answerCount + view.participantCount} />
-        </Suspense>
-        <span className="presenter-bg__veil" />
-      </div>
       <div className="presenter-bar">
         <Link to="/dashboard" className="brand">
           <Logo /> QuizFlow
@@ -282,23 +287,37 @@ export default function LiveSessionPage() {
                 <span className="badge badge-primary">
                   Question {q.index + 1} / {q.total}
                 </span>
-                {q.choiceMode === 'MULTIPLE' && <span className="badge">Plusieurs réponses possibles</span>}
+                {kind === 'CHOIX' && q.choiceMode === 'MULTIPLE' && <span className="badge">Plusieurs réponses possibles</span>}
                 <span className="spacer" />
                 <div className="counter">
-                  {answerCount} <small>/ {view.stats?.participantCount ?? view.participantCount} réponses</small>
+                  {contribution ? (
+                    <>
+                      {answerCount} <small>{countLabel}</small>
+                    </>
+                  ) : (
+                    <>
+                      {answerCount} <small>/ {view.stats?.participantCount ?? view.participantCount} {countLabel}</small>
+                    </>
+                  )}
                 </div>
                 {secondsLeft !== null && q.durationSeconds && <CountdownRing seconds={secondsLeft} total={q.durationSeconds} size={72} />}
               </div>
-              <div className="progress">
-                <div style={{ width: `${(100 * answerCount) / Math.max(1, view.stats?.participantCount ?? view.participantCount)}%` }} />
-              </div>
+              {!contribution && (
+                <div className="progress">
+                  <div style={{ width: `${(100 * answerCount) / Math.max(1, view.stats?.participantCount ?? view.participantCount)}%` }} />
+                </div>
+              )}
             </div>
             <div className="question-title">{q.text}</div>
-            {showLive || closed ? (
+            {kind !== 'CHOIX' ? (
+              showLive || closed || contribution ? (
+                <KindResults kind={kind} data={view.stats ?? {}} onModerate={contribution ? moderate : undefined} />
+              ) : null
+            ) : showLive || closed ? (
               <ResultBars
                 items={q.choices.map((c) => ({ id: c.id, label: c.label, count: distribution[c.id] ?? 0, correct: correctIds.includes(c.id) }))}
                 total={answerCount}
-                revealCorrect={closed && view.activityType === 'QUIZ'}
+                revealCorrect={closed && correctIds.length > 0}
               />
             ) : (
               <ResultBars items={q.choices.map((c) => ({ id: c.id, label: c.label, count: 0 }))} total={0} />
@@ -368,7 +387,7 @@ export default function LiveSessionPage() {
             </label>
             <span className="spacer" />
             <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => act(() => api.closeQuestion(view.id))}>
-              Fermer la question et afficher la réponse
+              {kind === 'CHOIX' ? 'Fermer la question et afficher la réponse' : 'Fermer la question'}
             </button>
           </>
         )}
