@@ -21,7 +21,6 @@ __pycache__/
 .DS_Store
 
 # Documents générés à part (présentations, captures)
-Claude outputs/
 
 # Certificat HTTPS local (complément PowerPoint) et fichiers générés pour Microsoft
 certs/
