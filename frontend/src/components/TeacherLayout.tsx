@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import ThemeToggle from './ThemeToggle'
 import { Logo, PageLoader } from './ui'
 import './TeacherLayout.css'
 
@@ -20,7 +21,10 @@ export default function TeacherLayout() {
             <NavLink to="/dashboard">Activités</NavLink>
             <NavLink to="/history">Historique</NavLink>
           </nav>
+          {/* Emplacement pour les actions d'une page (ex. éditeur : retour, Enregistrer, Lancer). */}
+          <div id="header-actions" className="header-actions" />
           <div className="user-menu">
+            <ThemeToggle />
             <span className="muted">{teacher.displayName}</span>
             <button className="btn btn-outline btn-sm" onClick={logout}>
               Déconnexion

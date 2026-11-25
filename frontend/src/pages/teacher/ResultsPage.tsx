@@ -4,6 +4,7 @@ import { api } from '../../api/api'
 import { errorMessage } from '../../api/client'
 import type { ResultsView } from '../../api/types'
 import { ErrorAlert, PageLoader, ResultBars } from '../../components/ui'
+import { KindResults } from '../../components/KindResults'
 import { formatDate, typeLabel } from '../../lib/format'
 
 /** Détail d'une session terminée : statistiques par question et classement (W6). */
@@ -22,6 +23,9 @@ export default function ResultsPage() {
 
   const { session, leaderboard, questions } = results
   const quiz = session.activityType === 'QUIZ'
+  // Seules les questions à choix sont notées.
+  // Seules les questions avec une bonne réponse sont notées (elles ont un taux de réussite).
+  const graded = questions.filter((q) => q.successRate !== undefined && q.successRate !== null)
 
   const exportCsv = () => {
     const lines = [['Rang', 'Pseudo', 'Score'], ...leaderboard.map((e) => [e.rank, e.pseudo, e.score])]
@@ -65,7 +69,7 @@ export default function ResultsPage() {
         {quiz && (
           <div className="kpi">
             <div className="value">
-              {questions.length === 0 ? 0 : Math.round((100 * questions.reduce((s, q) => s + (q.successRate ?? 0), 0)) / questions.length)}%
+              {graded.length === 0 ? 0 : Math.round((100 * graded.reduce((s, q) => s + (q.successRate ?? 0), 0)) / graded.length)}%
             </div>
             <div className="label">de bonnes réponses en moyenne</div>
           </div>
@@ -76,13 +80,19 @@ export default function ResultsPage() {
         <div key={q.id} className="card stack">
           <div className="row">
             <span className="badge badge-primary">Question {q.position}</span>
-            <span className="muted small">{q.answerCount} réponse(s)</span>
+            <span className="muted small">
+              {q.answerCount} {q.kind === 'QR' ? 'question(s)' : q.kind === 'IDEES' ? 'idée(s)' : 'réponse(s)'}
+            </span>
             {quiz && q.successRate !== undefined && q.successRate !== null && (
               <span className={`badge ${q.successRate >= 0.5 ? 'badge-success' : 'badge-danger'}`}>{Math.round(q.successRate * 100)}% de réussite</span>
             )}
           </div>
           <h2>{q.text}</h2>
-          <ResultBars items={q.choices.map((c) => ({ id: c.id, label: c.label, count: c.count, correct: c.correct }))} total={q.answerCount} revealCorrect={quiz} />
+          {(q.kind ?? 'CHOIX') === 'CHOIX' ? (
+            <ResultBars items={q.choices.map((c) => ({ id: c.id, label: c.label, count: c.count, correct: c.correct }))} total={q.answerCount} revealCorrect={q.choices.some((c) => c.correct)} />
+          ) : (
+            <KindResults kind={q.kind!} data={q} />
+          )}
         </div>
       ))}
 
@@ -106,7 +116,7 @@ export default function ResultsPage() {
                     <td>{e.rank}</td>
                     <td>{e.pseudo}</td>
                     <td>
-                      {e.score} / {questions.length}
+                      {e.score} / {graded.length}
                     </td>
                   </tr>
                 ))}

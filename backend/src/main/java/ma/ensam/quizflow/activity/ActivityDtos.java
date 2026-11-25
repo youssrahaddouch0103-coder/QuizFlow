@@ -1,11 +1,11 @@
 package ma.ensam.quizflow.activity;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityStatus;
 import ma.ensam.quizflow.activity.ActivityEnums.ActivityType;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,7 +20,7 @@ public final class ActivityDtos {
      * maximales sont contrôlées ici ; les règles W2 décident du statut (BROUILLON ou PRETE).
      */
     public record ActivityRequest(
-            @NotNull ActivityType type,
+            ActivityType type,  // QUIZ (par défaut) ou SONDAGE
             @Size(max = 200) String title,
             @Size(max = 1000) String description,
             @Size(max = 100) List<@Valid QuestionRequest> questions) {}
@@ -28,6 +28,7 @@ public final class ActivityDtos {
     public record QuestionRequest(
             String id,
             @Size(max = 500) String text,
+            QuestionKind kind,
             ChoiceMode choiceMode,
             @Size(max = ActivityValidator.MAX_CHOICES) List<@Valid ChoiceRequest> choices) {}
 
@@ -35,7 +36,8 @@ public final class ActivityDtos {
 
     public record ChoiceView(String id, int position, String label, boolean correct) {}
 
-    public record QuestionView(String id, int position, String text, ChoiceMode choiceMode, List<ChoiceView> choices) {}
+    public record QuestionView(String id, int position, String text, QuestionKind kind, ChoiceMode choiceMode,
+                               List<ChoiceView> choices) {}
 
     public record ActivityView(
             String id,
@@ -52,7 +54,7 @@ public final class ActivityDtos {
 
     public static ActivityView view(Activity a, boolean locked) {
         List<QuestionView> questions = a.getQuestions().stream()
-                .map(q -> new QuestionView(q.getId(), q.getPosition(), q.getText(), q.getChoiceMode(),
+                .map(q -> new QuestionView(q.getId(), q.getPosition(), q.getText(), q.getKind(), q.getChoiceMode(),
                         q.getChoices().stream()
                                 .map(c -> new ChoiceView(c.getId(), c.getPosition(), c.getLabel(), c.isCorrect()))
                                 .toList()))

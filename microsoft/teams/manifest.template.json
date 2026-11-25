@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "04378981-9d77-4965-b54a-2a7a17c85f7a",
+  "developer": {
+    "name": "ENSAM Meknès - QuizFlow",
+    "websiteUrl": "{{ORIGIN}}/",
+    "privacyUrl": "{{ORIGIN}}/",
+    "termsOfUseUrl": "{{ORIGIN}}/"
+  },
+  "name": { "short": "QuizFlow", "full": "QuizFlow - quiz et sondages en direct" },
+  "description": {
+    "short": "Quiz et sondages en direct pendant vos réunions Teams.",
+    "full": "Lancez un quiz ou un sondage QuizFlow pendant une réunion Teams. Les participants répondent directement dans Teams, ou sur leur téléphone avec le code de la session."
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#1B2A4A",
+  "configurableTabs": [
+    {
+      "configurationUrl": "{{ORIGIN}}/teams/config?host=teams",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupChat"],
+      "context": ["channelTab", "privateChatTab", "meetingChatTab", "meetingDetailsTab", "meetingSidePanel", "meetingStage"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["{{HOST}}"],
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        { "name": "MeetingStage.Write.Chat", "type": "Delegated" },
+        { "name": "ChannelMeetingStage.Write.Group", "type": "Delegated" }
+      ]
+    }
+  }
+}

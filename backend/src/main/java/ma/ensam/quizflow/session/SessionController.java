@@ -67,6 +67,13 @@ public class SessionController {
         return service.cancel(teacher.id(), id);
     }
 
+    /** Question du public ou idée : marquer comme traitée (done) ou masquer (hidden). */
+    @PostMapping("/{id}/contributions/{contributionId}")
+    public LiveStats moderate(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id,
+                              @PathVariable UUID contributionId, @RequestBody ModerationRequest req) {
+        return service.moderate(teacher.id(), id, contributionId, req.done(), req.hidden());
+    }
+
     @GetMapping("/{id}/results")
     public ResultsView results(@AuthenticationPrincipal TeacherPrincipal teacher, @PathVariable UUID id) {
         return service.results(teacher.id(), id);

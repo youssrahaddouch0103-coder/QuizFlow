@@ -20,13 +20,11 @@ export default function DashboardEmptyState({
       {firstActivity ? (
         <>
           <h2>Vous n’avez pas encore créé d’activité.</h2>
-          <p>Ajoutez vos questions et lancez votre activité quand elle est prête.</p>
           <Link className="btn btn-primary" to="/activities/new?type=QUIZ">Créer mon premier quiz</Link>
         </>
       ) : searching ? (
         <>
           <h2>Aucune activité ne correspond à votre recherche.</h2>
-          <p>Essayez un autre titre ou effacez la recherche.</p>
           <button type="button" className="btn btn-outline" onClick={onClearSearch}>Effacer la recherche</button>
         </>
       ) : (

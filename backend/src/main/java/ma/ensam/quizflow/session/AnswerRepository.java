@@ -18,6 +18,8 @@ public interface AnswerRepository extends JpaRepository<Answer, UUID> {
 
     List<Answer> findBySessionId(UUID sessionId);
 
+    List<Answer> findBySessionIdAndQuestionId(UUID sessionId, String questionId);
+
     /** Répartition des choix pour une question : [choice_id, nombre]. */
     @Query(value = """
             select ac.choice_id, count(*)

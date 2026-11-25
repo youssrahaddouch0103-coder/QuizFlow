@@ -11,6 +11,12 @@ import { readPending, storePending } from '../../auth/pendingRegistration'
 import EmailVerificationForm from './EmailVerificationForm'
 import GoogleAuthButton from './GoogleAuthButton'
 
+/** Page où revenir après la connexion (?next=/office par exemple). Seulement une adresse de QuizFlow. */
+function nextPage(): string {
+  const next = new URLSearchParams(window.location.search).get('next')
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+}
+
 export function LoginPage() {
   const { teacher, login } = useAuth()
   const navigate = useNavigate()
@@ -19,7 +25,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (teacher) return <Navigate to="/dashboard" replace />
+  if (teacher) return <Navigate to={nextPage()} replace />
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -27,7 +33,7 @@ export function LoginPage() {
     setError(null)
     try {
       await login(email, password)
-      navigate('/dashboard')
+      navigate(nextPage())
     } catch (err) {
       setError(errorMessage(err))
     } finally {

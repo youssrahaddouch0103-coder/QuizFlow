@@ -25,15 +25,15 @@
 .editor-checklist ul { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 15px; }
 .editor-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: .85rem; color: var(--text); }
 .editor-check-mark { display: grid; place-items: center; flex: 0 0 23px; height: 23px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); font-weight: 700; }
-.is-complete .editor-check-mark { background: #e7f3ec; border-color: #b0d4bf; color: #246743; }
+.is-complete .editor-check-mark { background: var(--success-soft); border-color: var(--good-border); color: var(--success); }
 .editor-check-status { display: block; margin-top: 2px; font-size: .72rem; color: var(--muted); }
-.is-complete .editor-check-status { color: #246743; }
+.is-complete .editor-check-status { color: var(--success); }
 .editor-checklist > p { border-top: 1px solid var(--border); padding-top: 14px; color: var(--muted); font-size: .78rem; line-height: 1.6; }
 .activity-editor .question-head .btn-danger { margin-left: 4px; background: transparent; color: var(--danger); }
-.activity-editor .question-head .btn-danger:hover { background: #fcebef; }
+.activity-editor .question-head .btn-danger:hover { background: var(--danger-soft); }
 .activity-editor .question-card { box-shadow: 0 3px 16px #1b2a4a08; }
 .activity-editor .question-card:focus-within { border-color: var(--border-strong); }
-.activity-editor .question-head .btn-ghost { border: 1px solid var(--border); background: #fff; }
+.activity-editor .question-head .btn-ghost { border: 1px solid var(--border); background: var(--surface); }
 .activity-editor .ai-panel { border-color: var(--border); box-shadow: none; }
 .activity-editor :is(.btn, .card, .input, .textarea) { transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
 @media (prefers-reduced-motion: no-preference) {

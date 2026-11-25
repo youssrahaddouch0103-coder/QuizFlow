@@ -2,6 +2,7 @@ package ma.ensam.quizflow.session;
 
 import ma.ensam.quizflow.activity.Activity;
 import ma.ensam.quizflow.activity.ActivityEnums.ChoiceMode;
+import ma.ensam.quizflow.activity.ActivityEnums.QuestionKind;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -68,5 +69,21 @@ class ScoringServiceTest {
         assertThat(stats.answerCount()).isEqualTo(2);
         assertThat(stats.successRate()).isEqualTo(0.5);
         assertThat(stats.distribution()).containsEntry("a", 1L).containsEntry("b", 1L).containsEntry("c", 0L);
+    }
+
+    @Test
+    void onlyChoiceQuestionsHaveASuccessRateInAQuiz() {
+        UUID s = UUID.randomUUID();
+        Activity.Question choice = question("q1", ChoiceMode.UNIQUE, "a");
+        Activity.Question cloud = new Activity.Question("q2", 2, "Un mot ?", QuestionKind.NUAGE, ChoiceMode.UNIQUE, new ArrayList<>());
+        List<Answer> answers = List.of(
+                new Answer(UUID.randomUUID(), s, "q1", true, Set.of("a")),
+                Answer.text(UUID.randomUUID(), s, "q2", "Java"),
+                Answer.text(UUID.randomUUID(), s, "q2", "java"));
+        List<ScoringService.Stats> stats = scoring.computeStats(List.of(choice, cloud), answers, List.of(), true);
+        assertThat(stats.get(0).successRate()).isEqualTo(1.0);
+        assertThat(stats.get(1).successRate()).isNull();
+        assertThat(stats.get(1).answerCount()).isEqualTo(2);
+        assertThat(stats.get(1).details().words()).hasSize(1);
     }
 }
