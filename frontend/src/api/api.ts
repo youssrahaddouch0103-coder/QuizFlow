@@ -7,9 +7,11 @@ import type {
   AiGenerateRequest,
   AiGenerateResponse,
   AuthResponse,
+  ContributionView,
   CourseDocument,
   DocumentGenerateRequest,
   JoinResponse,
+  LiveStats,
   PlayerState,
   PublicSessionInfo,
   ResultsView,
@@ -19,6 +21,9 @@ import type {
 } from './types'
 
 const PLAYER_HEADER = 'X-Participant-Token'
+
+/** Réponse d'un étudiant selon le type de question. */
+export type AnswerPayload = { choiceIds?: string[]; text?: string; value?: number }
 
 export const api = {
   // Authentification
@@ -70,6 +75,8 @@ export const api = {
   endSession: (id: string) => request<ResultsView>(`/api/sessions/${id}/end`, { method: 'POST' }),
   cancelSession: (id: string) => request<TeacherSessionView>(`/api/sessions/${id}/cancel`, { method: 'POST' }),
   sessionResults: (id: string) => request<ResultsView>(`/api/sessions/${id}/results`),
+  moderate: (id: string, contributionId: string, change: { done?: boolean; hidden?: boolean }) =>
+    request<LiveStats>(`/api/sessions/${id}/contributions/${contributionId}`, { method: 'POST', body: change }),
 
   // Public (étudiants)
   publicConfig: () => request<{ publicUrl: string }>('/api/public/config', { auth: false }),
@@ -78,10 +85,23 @@ export const api = {
     request<JoinResponse>(`/api/public/sessions/${code}/join`, { method: 'POST', body: { pseudo }, auth: false }),
   playerState: (code: string, token: string) =>
     request<PlayerState>(`/api/public/sessions/${code}/state`, { headers: { [PLAYER_HEADER]: token }, auth: false }),
-  answer: (code: string, token: string, questionId: string, choiceIds: string[]) =>
+  answer: (code: string, token: string, questionId: string, answer: AnswerPayload) =>
     request<{ accepted: boolean }>(`/api/public/sessions/${code}/answers`, {
       method: 'POST',
-      body: { questionId, choiceIds },
+      body: { questionId, ...answer },
+      headers: { [PLAYER_HEADER]: token },
+      auth: false,
+    }),
+  contribute: (code: string, token: string, questionId: string, text: string) =>
+    request<ContributionView>(`/api/public/sessions/${code}/contributions`, {
+      method: 'POST',
+      body: { questionId, text },
+      headers: { [PLAYER_HEADER]: token },
+      auth: false,
+    }),
+  vote: (code: string, token: string, contributionId: string) =>
+    request<{ voted: boolean }>(`/api/public/sessions/${code}/contributions/${contributionId}/vote`, {
+      method: 'POST',
       headers: { [PLAYER_HEADER]: token },
       auth: false,
     }),

@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../../api/api'
 import { errorMessage } from '../../api/client'
-import type { Activity, ActivityType, AiGeneratedQuestion, ChoiceMode, Question } from '../../api/types'
+import type { Activity, ActivityType, AiGeneratedQuestion, ChoiceMode, Question, QuestionKind } from '../../api/types'
 import { ChoiceLetter, ErrorAlert, PageLoader, StatusBadge } from '../../components/ui'
-import { typeLabel } from '../../lib/format'
+import { usesChoices } from '../../lib/format'
 import AiPanel from './AiPanel'
 import ActivitySymbol from '../../components/ActivitySymbol'
 import './ActivityEditorPage.css'
 import './ActivityEditorPolish.css'
 import QuestionNavigator from './QuestionNavigator'
+import ActivityInfoDialog from './ActivityInfoDialog'
+import { QuestionTypeDrawer, TypeIcon } from './QuestionTypes'
+import { QUIZ_TYPES, TYPE_OPTIONS, typeOption, typeValue, type TypeOption } from '../../lib/questionTypes'
 import './ActivityEditorStudio.css'
 
 const MAX_CHOICES = 6
@@ -17,36 +21,43 @@ const MIN_CHOICES = 2
 
 /** Question en cours d'édition : "uid" sert seulement de clé React. */
 type DraftChoice = { uid: string; id?: string; label: string; correct: boolean }
-type DraftQuestion = { uid: string; id?: string; text: string; choiceMode: ChoiceMode; choices: DraftChoice[] }
+type DraftQuestion = { uid: string; id?: string; text: string; kind: QuestionKind; choiceMode: ChoiceMode; choices: DraftChoice[] }
+
 
 let counter = 0
 const uid = () => `tmp-${++counter}`
 
-const emptyQuestion = (): DraftQuestion => ({
+const emptyQuestion = (kind: QuestionKind = 'CHOIX', choiceMode: ChoiceMode = 'UNIQUE'): DraftQuestion => ({
   uid: uid(),
   text: '',
-  choiceMode: 'UNIQUE',
-  choices: [
-    { uid: uid(), label: '', correct: false },
-    { uid: uid(), label: '', correct: false },
-  ],
+  kind,
+  choiceMode,
+  // Choix et classement commencent avec deux lignes ; les autres types n'en ont pas besoin.
+  choices: usesChoices(kind)
+    ? [
+        { uid: uid(), label: '', correct: false },
+        { uid: uid(), label: '', correct: false },
+      ]
+    : [],
 })
 
 const toDraft = (q: Question): DraftQuestion => ({
   uid: uid(),
   id: q.id,
   text: q.text ?? '',
+  kind: q.kind ?? 'CHOIX',
   choiceMode: q.choiceMode,
   choices: q.choices.map((c) => ({ uid: uid(), id: c.id, label: c.label ?? '', correct: c.correct })),
 })
 
 export default function ActivityEditorPage() {
   const { id } = useParams()
-  const [params] = useSearchParams()
   const navigate = useNavigate()
   const isNew = !id
+  const [params] = useSearchParams()
+  // Quiz : questions à choix avec bonnes réponses. Sondage : tous les types de questions.
+  const [type, setType] = useState<ActivityType>(params.get('type') === 'SONDAGE' ? 'SONDAGE' : 'QUIZ')
 
-  const [type, setType] = useState<ActivityType>((params.get('type') as ActivityType) || 'QUIZ')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [questions, setQuestions] = useState<DraftQuestion[]>(() => (isNew ? [emptyQuestion()] : []))
@@ -56,14 +67,19 @@ export default function ActivityEditorPage() {
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
-  // Passe à true après un enregistrement sans titre : le champ est alors signalé en rouge.
-  const [titleWarning, setTitleWarning] = useState(false)
+  // Les boutons Retour, Enregistrer et Lancer sont affichés dans la barre du haut (voir TeacherLayout).
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => setHeaderSlot(document.getElementById('header-actions')), [])
   const activeQuestion = questions.find(q => q.uid === selectedQuestion)?.uid ?? questions[0]?.uid
-  const addQuestion = () => {
-    const question = emptyQuestion()
+  // Barre des types : null = fermée ; 'add' = nouvelle question ; sinon uid de la question dont on change le type.
+  const [typeDrawer, setTypeDrawer] = useState<'add' | string | null>(null)
+  const closeDrawer = useCallback(() => setTypeDrawer(null), [])
+  const addQuestion = (option: TypeOption) => {
+    const question = emptyQuestion(option.kind, option.mode)
     setQuestions(qs => [...qs, question])
     setSelectedQuestion(question.uid)
     setDirty(true)
+    window.setTimeout(() => document.getElementById(`question-${question.uid}`)?.focus(), 300)
   }
 
   useEffect(() => {
@@ -72,10 +88,9 @@ export default function ActivityEditorPage() {
       .getActivity(id)
       .then((a) => {
         setSaved(a)
-        setType(a.type)
         setTitle(a.title ?? '')
-        setTitleWarning(!(a.title ?? '').trim())
         setDescription(a.description ?? '')
+        setType(a.type)
         setQuestions(a.questions.map(toDraft))
       })
       .catch((e) => setError(errorMessage(e)))
@@ -83,6 +98,8 @@ export default function ActivityEditorPage() {
   }, [id])
 
   const quiz = type === 'QUIZ'
+  // Petite fenêtre « titre et description » : ouverte d'office pour une nouvelle activité.
+  const [infoOpen, setInfoOpen] = useState(isNew)
   const readOnly = !!saved && (saved.locked || saved.status === 'ARCHIVEE')
 
   const update = (fn: (qs: DraftQuestion[]) => DraftQuestion[]) => {
@@ -103,6 +120,21 @@ export default function ActivityEditorPage() {
     patchQuestion(q.uid, { choices })
   }
 
+  /** Changement de type depuis la liste : le choix unique et le choix multiple restent deux modes de CHOIX. */
+  const setKind = (q: DraftQuestion, value: string) => {
+    if (value.startsWith('CHOIX:')) {
+      const mode = value.slice(6) as ChoiceMode
+      if (q.kind === 'CHOIX') return setMode(q, mode)
+      return patchQuestion(q.uid, { kind: 'CHOIX', choiceMode: mode })
+    }
+    const kind = value as QuestionKind
+    // Un classement a besoin d'au moins deux éléments.
+    const choices = kind === 'CLASSEMENT' && q.choices.length < MIN_CHOICES
+      ? [...q.choices, ...Array.from({ length: MIN_CHOICES - q.choices.length }, () => ({ uid: uid(), label: '', correct: false }))]
+      : q.choices
+    patchQuestion(q.uid, { kind, choices })
+  }
+
   const setMode = (q: DraftQuestion, mode: ChoiceMode) => {
     let choices = q.choices
     // En passant en choix unique, on ne garde que la première bonne réponse.
@@ -119,6 +151,16 @@ export default function ActivityEditorPage() {
     patchQuestion(q.uid, { choiceMode: mode, choices })
   }
 
+  const pickType = (option: TypeOption) => {
+    if (typeDrawer === 'add') addQuestion(option)
+    else {
+      const q = questions.find((x) => x.uid === typeDrawer)
+      if (q) setKind(q, option.value)
+    }
+    setTypeDrawer(null)
+  }
+  const drawerQuestion = typeDrawer && typeDrawer !== 'add' ? questions.find((x) => x.uid === typeDrawer) : undefined
+
   const move = (index: number, delta: number) =>
     update((qs) => {
       const next = [...qs]
@@ -132,6 +174,7 @@ export default function ActivityEditorPage() {
     const drafts: DraftQuestion[] = generated.map((g) => ({
       uid: uid(),
       text: g.text,
+      kind: 'CHOIX' as QuestionKind,
       choiceMode: g.choiceMode,
       choices: g.choices.map((c) => ({ uid: uid(), label: c.label, correct: quiz && c.correct })),
     }))
@@ -152,8 +195,9 @@ export default function ActivityEditorPage() {
       questions: questions.map((q) => ({
         id: q.id,
         text: q.text,
+        kind: q.kind,
         choiceMode: q.choiceMode,
-        choices: q.choices.map((c) => ({ id: c.id, label: c.label, correct: quiz && c.correct })),
+        choices: usesChoices(q.kind) ? q.choices.map((c) => ({ id: c.id, label: c.label, correct: quiz && q.kind === 'CHOIX' && c.correct })) : [],
       })),
     }
     try {
@@ -164,12 +208,7 @@ export default function ActivityEditorPage() {
       if (isNew) navigate(`/activities/${result.id}/edit`, { replace: true })
       if (!title.trim()) {
         // Enregistré en brouillon, mais on montre tout de suite ce qui manque.
-        setTitleWarning(true)
-        window.setTimeout(() => {
-          const field = document.getElementById('title')
-          field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          field?.focus()
-        }, 100)
+        setInfoOpen(true)
       }
     } catch (e) {
       setError(errorMessage(e))
@@ -214,43 +253,37 @@ export default function ActivityEditorPage() {
       }
       return
     }
-    const field = /titre/i.test(message) ? document.getElementById('title') : null
-    field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    field?.focus()
+    if (/titre/i.test(message)) setInfoOpen(true)
   }
 
   if (loading) return <PageLoader />
 
   return (
     <div className="stack activity-editor" style={{ gap: 20 }}>
-      <div className="page-head editor-heading">
-        <div className="stack" style={{ gap: 6 }}>
-          <Link to="/dashboard" className="small">
-            ← Mes activités
-          </Link>
-          <div className="row">
-            <h1>{isNew ? `Créer un ${typeLabel[type].toLowerCase()}` : 'Modifier l’activité'}</h1>
+      <h1 className="sr-only">{isNew ? (quiz ? 'Nouveau quiz' : 'Nouveau sondage') : 'Modifier l’activité'}</h1>
+      {headerSlot &&
+        createPortal(
+          <div className="editor-topbar">
+            <Link to="/dashboard" className="editor-topbar__back">
+              ← Mes activités
+            </Link>
+            <span className="spacer" />
             {saved && <StatusBadge status={saved.status} />}
-            {dirty && <span className="badge badge-warning">Modifications non enregistrées</span>}
-          </div>
-          <p className="muted small">Préparez vos questions à votre rythme, puis partagez votre activité.</p>
-        </div>
-        <div className="editor-save-actions">
-          <div className="row">
+            {dirty && <span className="badge badge-warning">Non enregistré</span>}
             {!readOnly && (
-              <button className="btn btn-outline" onClick={save} disabled={busy}>
+              <button className="btn btn-outline btn-sm" onClick={save} disabled={busy}>
                 {busy ? 'Enregistrement…' : 'Enregistrer'}
               </button>
             )}
             {saved && saved.status !== 'ARCHIVEE' && (
-              <button className="btn btn-primary" onClick={launch} disabled={busy || !canLaunch}>
+              <button className="btn btn-primary btn-sm" onClick={launch} disabled={busy || !canLaunch} title={launchHint ?? undefined}>
                 Lancer une session →
               </button>
             )}
-          </div>
-          {saved && saved.status !== 'ARCHIVEE' && launchHint && <p className="editor-launch-hint">{launchHint}</p>}
-        </div>
-      </div>
+          </div>,
+          headerSlot,
+        )}
+      {saved && saved.status !== 'ARCHIVEE' && launchHint && <p className="editor-launch-hint">{launchHint}</p>}
 
       <ErrorAlert message={error} />
       {readOnly && (
@@ -275,75 +308,33 @@ export default function ActivityEditorPage() {
         </div>
       )}
 
-      {!readOnly && (
-        <AiPanel type={type} onAdd={addGenerated} />
-      )}
-
-      <div className="editor-layout">
-        <QuestionNavigator questions={questions} selected={activeQuestion} onSelect={setSelectedQuestion} onAdd={addQuestion} readOnly={readOnly} />
+      <div className={`editor-layout ${readOnly ? '' : 'has-side'}`}>
+        <QuestionNavigator questions={questions} selected={activeQuestion} onSelect={setSelectedQuestion} onAdd={() => setTypeDrawer('add')} readOnly={readOnly} />
         <fieldset disabled={readOnly} className="stack" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          <section className="card editor-activity-settings">
-          <div className="stack editor-intro">
-            <div className="editor-section-heading">
-              <ActivitySymbol kind={quiz ? 'quiz' : 'poll'} />
-              <div><h2>Informations de l’activité</h2><p className="muted small">Titre et description présentés aux participants.</p></div>
+          <section className="card editor-title-bar">
+            <ActivitySymbol kind={quiz ? 'quiz' : 'poll'} />
+            <div className="editor-title-bar__text">
+              <strong className={title.trim() ? '' : 'is-missing'}>{title.trim() || 'Sans titre'}</strong>
+              {description.trim() && <span>{description}</span>}
             </div>
-            {isNew && (
-              <div className="tabs" style={{ alignSelf: 'flex-start' }}>
-                {(['QUIZ', 'SONDAGE'] as ActivityType[]).map((t) => (
-                  <button key={t} type="button" aria-pressed={type === t} className={type === t ? 'active' : ''} onClick={() => setType(t)}>
-                    {typeLabel[t]}
-                  </button>
-                ))}
-              </div>
+            {!readOnly && (
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setInfoOpen(true)}>
+                Modifier
+              </button>
             )}
-            <div className="field">
-              <label htmlFor="title">Titre de l’activité</label>
-              <input
-                id="title"
-                className={`input ${titleWarning && !title.trim() ? 'is-invalid' : ''}`}
-                maxLength={200}
-                value={title}
-                aria-invalid={titleWarning && !title.trim()}
-                aria-describedby={titleWarning && !title.trim() ? 'title-error' : undefined}
-                placeholder={quiz ? 'Ex. Testez vos connaissances sur le climat' : 'Ex. Votre avis sur notre atelier'}
-                onChange={(e) => {
-                  setTitle(e.target.value)
-                  setDirty(true)
-                }}
-              />
-              {titleWarning && !title.trim() && (
-                <p id="title-error" className="editor-field-error">
-                  Donnez un titre à votre activité : sans titre, elle reste en brouillon et ne peut pas être lancée.
-                </p>
-              )}
-            </div>
-            <div className="field">
-              <label htmlFor="desc">Description (facultatif)</label>
-              <input
-                id="desc"
-                className="input"
-                maxLength={1000}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value)
-                  setDirty(true)
-                }}
-              />
-            </div>
-          </div>
           </section>
 
-          <div className="editor-questions-heading"><h2>Vos questions <span>{questions.length}</span></h2><p className="muted small">{quiz ? 'Ajoutez les choix et indiquez les bonnes réponses.' : 'Ajoutez les choix proposés aux participants.'}</p></div>
+          <div className="editor-questions-heading"><h2>Vos questions <span>{questions.length}</span></h2></div>
           {questions.map((q, qi) => (
             <div key={q.uid} className="card question-card" hidden={q.uid !== activeQuestion}>
               <div className="question-head">
                 <span className="question-number">Question {qi + 1}</span>
                 <span className="spacer" />
-                <select aria-label={`Type de réponse pour la question ${qi + 1}`} className="select" style={{ width: 'auto' }} value={q.choiceMode} onChange={(e) => setMode(q, e.target.value as ChoiceMode)}>
-                  <option value="UNIQUE">Choix unique</option>
-                  <option value="MULTIPLE">Choix multiple</option>
-                </select>
+                <button type="button" className="qt-chip" onClick={() => setTypeDrawer(q.uid)} aria-label={`Type de la question ${qi + 1} : ${typeOption(typeValue(q.kind, q.choiceMode)).label}. Changer de type`}>
+                  <TypeIcon value={typeValue(q.kind, q.choiceMode)} />
+                  {typeOption(typeValue(q.kind, q.choiceMode)).label}
+                  <small>Changer</small>
+                </button>
                 <button type="button" className="btn btn-ghost btn-sm" title="Monter" onClick={() => move(qi, -1)} disabled={qi === 0}>
                   ↑
                 </button>
@@ -365,18 +356,18 @@ export default function ActivityEditorPage() {
                   value={q.text}
                   onChange={(e) => patchQuestion(q.uid, { text: e.target.value })}
                 />
-                {q.choices.map((c, ci) => (
-                  <div key={c.uid} className={`choice-row ${quiz && c.correct ? 'editor-choice-correct' : ''}`}>
+                {usesChoices(q.kind) && q.choices.map((c, ci) => (
+                  <div key={c.uid} className={`choice-row ${quiz && q.kind === 'CHOIX' && c.correct ? 'editor-choice-correct' : ''}`}>
                     <ChoiceLetter index={ci} />
                     <input
-                      aria-label={`Choix ${ci + 1} de la question ${qi + 1}`}
+                      aria-label={`${q.kind === 'CLASSEMENT' ? 'Élément' : 'Choix'} ${ci + 1} de la question ${qi + 1}`}
                       className="input"
                       maxLength={200}
-                      placeholder={`Choix ${ci + 1}`}
+                      placeholder={`${q.kind === 'CLASSEMENT' ? 'Élément' : 'Choix'} ${ci + 1}`}
                       value={c.label}
                       onChange={(e) => setChoice(q, c.uid, { label: e.target.value })}
                     />
-                    {quiz && (
+                    {quiz && q.kind === 'CHOIX' && (
                       <label className={`correct-toggle ${c.correct ? 'on' : ''}`}>
                         <input type={q.choiceMode === 'UNIQUE' ? 'radio' : 'checkbox'} name={`correct-${q.uid}`} checked={c.correct} onChange={() => toggleCorrect(q, c.uid)} />
                         Bonne réponse
@@ -393,26 +384,61 @@ export default function ActivityEditorPage() {
                     </button>
                   </div>
                 ))}
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    disabled={q.choices.length >= MAX_CHOICES}
-                    onClick={() => patchQuestion(q.uid, { choices: [...q.choices, { uid: uid(), label: '', correct: false }] })}
-                  >
-                    + Ajouter un choix
-                  </button>
-                </div>
+                {usesChoices(q.kind) && (
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      disabled={q.choices.length >= MAX_CHOICES}
+                      onClick={() => patchQuestion(q.uid, { choices: [...q.choices, { uid: uid(), label: '', correct: false }] })}
+                    >
+                      {q.kind === 'CLASSEMENT' ? '+ Ajouter un élément' : '+ Ajouter un choix'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
 
-          <button type="button" className="btn btn-outline btn-lg editor-add-question" onClick={addQuestion}>
+          <button type="button" className="btn btn-outline btn-lg editor-add-question" onClick={() => setTypeDrawer('add')}>
             + Ajouter une question
           </button>
+          {!readOnly && (
+            <button type="button" className="btn btn-primary btn-lg editor-save-bottom" onClick={save} disabled={busy}>
+              {busy ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          )}
         </fieldset>
 
+        {!readOnly && (
+          <aside className="editor-side" aria-label="Assistant IA">
+            <AiPanel type={type} onAdd={addGenerated} />
+          </aside>
+        )}
       </div>
+
+      <ActivityInfoDialog
+        open={infoOpen}
+        isNew={isNew && !saved}
+        heading={quiz ? 'Nouveau quiz' : 'Nouveau sondage'}
+        title={title}
+        description={description}
+        onSave={(t, d) => {
+          setTitle(t)
+          setDescription(d)
+          setDirty(true)
+          setInfoOpen(false)
+        }}
+        onCancel={() => (isNew && !saved && !title.trim() ? navigate('/dashboard') : setInfoOpen(false))}
+      />
+      <QuestionTypeDrawer
+        options={quiz ? QUIZ_TYPES : TYPE_OPTIONS}
+        open={typeDrawer !== null}
+        title={typeDrawer === 'add' ? 'Ajouter une question' : 'Changer le type'}
+        current={drawerQuestion ? typeValue(drawerQuestion.kind, drawerQuestion.choiceMode) : undefined}
+        onPick={pickType}
+        onClose={closeDrawer}
+      />
     </div>
   )
 }

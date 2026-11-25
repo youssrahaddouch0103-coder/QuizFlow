@@ -30,3 +30,13 @@
     align-items: center;
   }
 }
+
+/* Actions propres à la page en cours, affichées dans la barre du haut. */
+.teacher-header .header-actions { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; justify-content: flex-end; }
+.teacher-header .header-actions:empty { display: none; }
+.teacher-header .user-menu { flex: none; }
+body:has(.activity-editor) .teacher-header .app-header-inner { max-width: 1400px; }
+.teacher-header .nav:has(~ .header-actions:not(:empty)) { flex: none; }
+@media (max-width: 860px) {
+  .teacher-header .header-actions { order: 10; flex-basis: 100%; }
+}

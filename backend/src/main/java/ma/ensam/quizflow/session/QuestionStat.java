@@ -42,17 +42,28 @@ public class QuestionStat {
     @Column(nullable = false, columnDefinition = "jsonb")
     private Map<String, Number> distribution = new HashMap<>();
 
+    /** Nuage de mots, textes, note, classement, contributions (null pour une question à choix). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private SessionDtos.QuestionDetails details;
+
     protected QuestionStat() {
     }
 
     public QuestionStat(UUID sessionId, String questionId, int position, int answerCount, Double successRate,
                         Map<String, Long> distribution) {
+        this(sessionId, questionId, position, answerCount, successRate, distribution, null);
+    }
+
+    public QuestionStat(UUID sessionId, String questionId, int position, int answerCount, Double successRate,
+                        Map<String, Long> distribution, SessionDtos.QuestionDetails details) {
         this.sessionId = sessionId;
         this.questionId = questionId;
         this.position = position;
         this.answerCount = answerCount;
         this.successRate = successRate;
         this.distribution = new HashMap<>(distribution);
+        this.details = details;
     }
 
     public UUID getSessionId() { return sessionId; }
@@ -61,6 +72,7 @@ public class QuestionStat {
     public int getAnswerCount() { return answerCount; }
     public Double getSuccessRate() { return successRate; }
     public Map<String, Number> getDistribution() { return distribution; }
+    public SessionDtos.QuestionDetails getDetails() { return details; }
 
     /** Nombre de sélections d'un choix (0 s'il n'a jamais été choisi). */
     public long count(String choiceId) {

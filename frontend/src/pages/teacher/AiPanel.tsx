@@ -23,6 +23,8 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
   const [model, setModel] = useState<string | null>(null)
   const [doc, setDoc] = useState<CourseDocument | null>(null)
   const [topic, setTopic] = useState('')
+  // Carte repliée par défaut : elle ne prend de la place que si l'enseignant l'ouvre.
+  const [open, setOpen] = useState(false)
   const selectDoc = useCallback((d: CourseDocument | null) => setDoc(d), [])
 
   const generate = async () => {
@@ -51,30 +53,18 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
   const tooShort = length < 50
   const docReady = doc?.status === 'READY'
   const canGenerate = source === 'text' ? !tooShort : docReady
-  const hasInput = source === 'text' ? length > 0 : !!doc
-  const step = suggestions.length > 0 ? 2 : hasInput ? 1 : 0
 
   return (
     <section className="ai-hero" aria-labelledby="ai-hero-title">
       <div className="ai-hero__grid">
-        <div className="ai-hero__intro">
-          <span className="ai-hero__chip">Assistant de questions</span>
-          <h2 id="ai-hero-title" className="ai-hero__title">
-            Votre cours devient un quiz en <span>30 secondes</span>.
-          </h2>
-          <p className="ai-hero__lead">
-            Collez un passage ou importez votre PDF. Les questions s’appuient uniquement sur votre contenu, avec la page d’où elles viennent, et vous gardez celles qui vous conviennent.
-          </p>
-          <ol className="ai-hero__steps">
-            {['Ajoutez votre texte ou votre PDF', 'Relisez les questions proposées', 'Ajoutez celles que vous gardez'].map((label, i) => (
-              <li key={label} className={i <= step ? 'is-active' : ''}>
-                <span>{i + 1}</span>
-                {label}
-              </li>
-            ))}
-          </ol>
-        </div>
+        <h2 id="ai-hero-title" className="ai-hero__title">
+          <button type="button" className="ai-hero__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            <span>Générer avec l’IA</span>
+            <span aria-hidden="true">{open ? '−' : '+'}</span>
+          </button>
+        </h2>
 
+        {open && (
         <div className="ai-hero__panel">
           <div className="ai-hero__tabs" role="tablist" aria-label="Source du contenu">
             <button type="button" role="tab" aria-selected={source === 'text'} className={source === 'text' ? 'is-selected' : ''} onClick={() => setSource('text')}>
@@ -92,13 +82,13 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
                 <textarea
                   className="textarea ai-hero__textarea"
                   maxLength={20000}
-                  placeholder="Collez un extrait de cours, de formation ou de présentation…"
+                  placeholder="Collez un extrait de votre cours"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                 />
               </label>
               <p className={`ai-hero__count ${tooShort ? '' : 'is-ready'}`}>
-                {tooShort ? `${length} / 50 caractères minimum` : `${length} caractères · prêt à générer`}
+                {tooShort ? `${length} / 50 caractères minimum` : `${length} caractères`}
               </p>
             </>
           ) : (
@@ -116,8 +106,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                   />
-                  <small>Sans sujet, les questions couvrent tout le document.</small>
-                </label>
+                                  </label>
               )}
             </>
           )}
@@ -156,9 +145,10 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
           </button>
           <ErrorAlert message={error} />
         </div>
+        )}
       </div>
 
-      {suggestions.length > 0 && (
+      {open && suggestions.length > 0 && (
         <div className="ai-hero__results">
           <div className="ai-hero__results-head">
             <strong>{suggestions.length} proposition{suggestions.length > 1 ? 's' : ''} à relire</strong>
@@ -198,7 +188,7 @@ export default function AiPanel({ type, onAdd }: { type: ActivityType; onAdd: (q
               </article>
             ))}
           </div>
-          {model && <p className="ai-hero__model">Modèle : {model}. Relisez toujours les questions avant de les utiliser.</p>}
+          {model && <p className="ai-hero__model">Modèle : {model}</p>}
         </div>
       )}
     </section>

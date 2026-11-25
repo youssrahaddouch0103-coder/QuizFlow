@@ -1,0 +1,14 @@
+/* Pages ouvertes dans PowerPoint (diapositive) ou Teams (panneau de réunion). */
+.embed { display: grid; place-items: center; min-height: 100vh; padding: 16px; background: var(--brand); }
+.embed-card { display: grid; gap: 14px; justify-items: center; width: min(560px, 100%); padding: clamp(18px, 4vw, 32px); border-radius: 18px; background: var(--surface); color: var(--text); text-align: center; box-shadow: var(--shadow); }
+.embed-card > .stack, .embed-card > .embed-list, .embed-card > .btn, .embed-card > .alert { width: 100%; }
+.embed-card .brand { font-size: 1.2rem; }
+.embed-title { font-size: clamp(1.2rem, 3.5vw, 1.8rem); }
+.embed-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 55vh; overflow-y: auto; text-align: left; }
+.embed-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.embed-list li > span { display: grid; flex: 1; min-width: 0; }
+.embed-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.embed-code { text-align: center; font-size: 1.4rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+.embed-big-code { font-family: var(--font-display); font-size: 2.6rem; font-weight: 800; letter-spacing: 0.08em; color: var(--primary); }
+.embed--panel { place-items: start center; padding: 12px; }
+.embed--panel .embed-card { gap: 12px; padding: 18px; }

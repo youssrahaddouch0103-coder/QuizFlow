@@ -18,7 +18,6 @@ export default function ActivityChecklist({ title, questions, quiz }: {
   ]
   return (
     <section className="card editor-checklist" aria-label="Préparation de l’activité">
-      <span className="editor-eyebrow">Votre progression</span>
       <h3>Avant de lancer</h3>
       <ul>
         {items.map(item => <li key={item.label} className={item.done ? 'is-complete' : ''}>
@@ -26,7 +25,6 @@ export default function ActivityChecklist({ title, questions, quiz }: {
           <span>{item.label}<span className="editor-check-status">{item.done ? 'Complété' : 'À compléter'}</span></span>
         </li>)}
       </ul>
-      <p>Vous pouvez enregistrer un brouillon à tout moment. La validation finale a lieu à l’enregistrement.</p>
     </section>
   )
 }
