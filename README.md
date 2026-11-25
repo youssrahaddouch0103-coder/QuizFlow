@@ -42,6 +42,10 @@ same address. The QR code then points to a URL the phones can open.
 
 Without an API key, the AI service runs in `mock` mode (demo questions), so the whole pipeline stays testable.
 
+## PowerPoint and Teams
+
+QuizFlow can be launched from a PowerPoint slide or inside a Teams meeting: see [microsoft/README.md](microsoft/README.md).
+
 ## Development
 
 Run only the databases and the AI service in Docker, then the backend and frontend locally (hot reload):

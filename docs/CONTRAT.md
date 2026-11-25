@@ -103,6 +103,18 @@ Corps de création / modification :
 
 La réponse ajoute `id`, `status`, `locked` (R1), `errors` (règles W2 non respectées), `questionCount`, `createdAt`, `updatedAt`.
 
+**Types de questions** (`kind`, absent = `CHOIX`) :
+
+| `kind` | Question | `choices` | Réponse de l'étudiant |
+|---|---|---|---|
+| `CHOIX` | choix unique ou multiple (`choiceMode`) ; seul type noté dans un quiz | 2 à 6 choix | `choiceIds` |
+| `NUAGE` | nuage de mots | aucun | `text` (40 caractères maximum) |
+| `TEXTE` | texte libre | aucun | `text` (500 caractères maximum) |
+| `NOTE` | note de 1 à 5 | aucun | `value` |
+| `CLASSEMENT` | classement par ordre de préférence | 2 à 6 éléments, sans bonne réponse | `choiceIds` dans l'ordre choisi (tous les éléments) |
+| `QR` | questions du public | aucun | contributions + votes (voir plus bas) |
+| `IDEES` | idées | aucun | contributions + votes |
+
 ### IA
 
 | Méthode | Route | Corps | Réponse |
@@ -124,6 +136,7 @@ Les questions générées ne sont **pas** enregistrées : l'enseignant les relit
 | POST | `/api/sessions/{id}/end` | → `TERMINEE`, calcule scores et statistiques, renvoie les résultats |
 | POST | `/api/sessions/{id}/cancel` | `EN_ATTENTE` → `ANNULEE` |
 | GET | `/api/sessions/{id}/results` | résultats d'une session terminée |
+| POST | `/api/sessions/{id}/contributions/{contributionId}` `{ done?, hidden? }` | Q&A et idées : marquer comme traitée ou masquer ; renvoie les statistiques à jour |
 
 ### Étudiants (public, sans compte)
 
@@ -135,7 +148,9 @@ Le jeton reçu au `join` est envoyé dans l'en-tête `X-Participant-Token`.
 | GET | `/api/public/sessions/{code}` | `{ code, title, type, state }` (404 si aucune session active) |
 | POST | `/api/public/sessions/{code}/join` `{ pseudo }` | 201 `{ participantId, pseudo, token }` |
 | GET | `/api/public/sessions/{code}/state` | état complet de l'écran étudiant (question, déjà répondu, correction, résultat final) |
-| POST | `/api/public/sessions/{code}/answers` `{ questionId, choiceIds }` | 201 `{ accepted: true }` |
+| POST | `/api/public/sessions/{code}/answers` `{ questionId, choiceIds?, text?, value? }` | 201 `{ accepted: true }` (champ selon le type de question) |
+| POST | `/api/public/sessions/{code}/contributions` `{ questionId, text }` | 201 `{ id, text, votes, done, hidden }` (Q&A et idées, 10 par étudiant et par question) |
+| POST | `/api/public/sessions/{code}/contributions/{id}/vote` | `{ voted }` : un second appel retire le vote ; pas de vote pour sa propre contribution |
 
 ## WebSocket (STOMP)
 
@@ -146,12 +161,13 @@ Chaque message a la forme `{ "type": "...", "payload": { ... }, "at": "2026-11-0
 
 | Canal | Type | Payload |
 |---|---|---|
-| `/topic/sessions/{code}` | `QUESTION_OPENED` | `{ id, index, total, text, choiceMode, choices: [{ id, label }] }` (jamais la bonne réponse) |
+| `/topic/sessions/{code}` | `QUESTION_OPENED` | `{ id, index, total, text, kind, choiceMode, choices: [{ id, label }] }` (jamais la bonne réponse) |
 | | `QUESTION_CLOSED` | `{ questionId, correctChoiceIds, distribution: { choiceId: n }, answerCount }` |
 | | `SESSION_ENDED` | `{ code }` → l'étudiant relit son état pour obtenir son score |
 | | `SESSION_CANCELLED` | `{ code }` |
+| | `CONTRIBUTIONS` | `{ questionId, contributions: [{ id, text, votes, done }] }` (Q&A et idées, sans les contributions masquées ni les pseudos) |
 | `/topic/sessions/{code}/teacher` (propriétaire uniquement) | `PARTICIPANT_JOINED` | `{ pseudo, participantCount }` |
-| | `ANSWER_STATS` | `{ questionId, answerCount, participantCount, distribution }` |
+| | `ANSWER_STATS` | `{ questionId, kind, answerCount, participantCount, distribution, words, texts, rating, ranking, contributions }` (champs remplis selon le type) |
 | | `SESSION_RESULTS` | même objet que `GET /results` |
 
 **Règle de reconnexion** : à chaque (re)connexion, le client relit l'état par l'API REST, car des messages ont pu être perdus pendant la coupure.

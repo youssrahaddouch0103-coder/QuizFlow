@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Complément PowerPoint « QuizFlow » (complément de contenu : il s'insère dans une diapositive).
+     Ne pas modifier {{ORIGIN}} : node microsoft/build.mjs le remplace par l'adresse HTTPS de QuizFlow. -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:type="ContentApp">
+  <Id>e2c9a6c3-6e6f-4bfb-bfc9-26dd0ff15752</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>ENSAM Meknès - QuizFlow</ProviderName>
+  <DefaultLocale>fr-FR</DefaultLocale>
+  <DisplayName DefaultValue="QuizFlow" />
+  <Description DefaultValue="Lancez un quiz ou un sondage QuizFlow depuis une diapositive." />
+  <IconUrl DefaultValue="{{ORIGIN}}/office/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="{{ORIGIN}}/office/icon-64.png" />
+  <SupportUrl DefaultValue="{{ORIGIN}}/" />
+  <AppDomains>
+    <AppDomain>{{ORIGIN}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Presentation" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{ORIGIN}}/office" />
+    <RequestedWidth>960</RequestedWidth>
+    <RequestedHeight>540</RequestedHeight>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <AllowSnapshot>true</AllowSnapshot>
+</OfficeApp>

@@ -1,94 +1,88 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import ThemeToggle from '../components/ThemeToggle'
 import { Logo } from '../components/ui'
 import { LETTERS } from '../lib/format'
 import './LandingPage.css'
 
-const Hero3D = lazy(() => import('./Hero3D'))
 
 const reduceMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Fait apparaître son contenu quand il entre à l'écran. */
-function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (reduceMotion() || !('IntersectionObserver' in window)) {
-      setVisible(true)
-      return
-    }
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true)
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.15 },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-  return (
-    <div ref={ref} className={`reveal ${visible ? 'is-visible' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
-      {children}
-    </div>
-  )
-}
-
 /* ---------- Scène animée : écran projeté + téléphone ---------- */
 
-const DEMO_CHOICES = ['Oxygène', 'Dioxyde de carbone', 'Azote', 'Hydrogène']
-const WEIGHTS = [0.62, 0.22, 0.1, 0.06]
+/** Plusieurs questions d'exemple : la scène change à chaque visite et après chaque série de votes. */
+const SCENES: { question: string; choices: string[]; weights: number[] }[] = [
+  { question: 'Quel gaz les plantes rejettent-elles pendant la photosynthèse ?', choices: ['Oxygène', 'Dioxyde de carbone', 'Azote', 'Hydrogène'], weights: [0.62, 0.22, 0.1, 0.06] },
+  { question: 'Quelle couche du modèle OSI assure le routage ?', choices: ['Liaison', 'Réseau', 'Transport', 'Session'], weights: [0.18, 0.58, 0.19, 0.05] },
+  { question: 'Combien vaut la dérivée de x² ?', choices: ['x', '2x', 'x²/2', '2'], weights: [0.12, 0.7, 0.1, 0.08] },
+  { question: 'Quelle structure suit le principe « premier entré, premier sorti » ?', choices: ['Pile', 'File', 'Arbre', 'Graphe'], weights: [0.3, 0.55, 0.1, 0.05] },
+  { question: 'Quel métal conduit le mieux l’électricité ?', choices: ['Cuivre', 'Fer', 'Argent', 'Aluminium'], weights: [0.48, 0.07, 0.35, 0.1] },
+  { question: 'En quelle année a eu lieu la Révolution française ?', choices: ['1689', '1789', '1815', '1848'], weights: [0.1, 0.72, 0.1, 0.08] },
+]
 const MAX_VOTES = 32
+const seed = (weights: number[]) => weights.map((w) => Math.round(w * 8))
 
-function pickChoice() {
+function pickChoice(weights: number[]) {
   let r = Math.random()
-  for (let i = 0; i < WEIGHTS.length; i++) {
-    r -= WEIGHTS[i]
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]
     if (r <= 0) return i
   }
   return 0
 }
 
 function LiveScene() {
-  const [votes, setVotes] = useState<number[]>([9, 3, 1, 1])
+  const [sceneIndex, setSceneIndex] = useState(() => Math.floor(Math.random() * SCENES.length))
+  const scene = SCENES[sceneIndex]
+  const [votes, setVotes] = useState<number[]>(() => seed(scene.weights))
   const [tapped, setTapped] = useState<number | null>(null)
   const [pops, setPops] = useState<{ id: number; choice: number }[]>([])
 
   useEffect(() => {
-    if (reduceMotion()) return
+    if (reduceMotion()) {
+      setVotes(scene.weights.map((w) => Math.round(w * 24)))
+      return
+    }
     let id = 0
     const timer = window.setInterval(() => {
-      const choice = pickChoice()
+      const choice = pickChoice(scene.weights)
       id += 1
       const popId = id
       setTapped(choice)
       setPops((p) => [...p.slice(-3), { id: popId, choice }])
-      setVotes((v) => (v.reduce((a, b) => a + b, 0) >= MAX_VOTES ? [1, 0, 0, 0] : v.map((n, i) => (i === choice ? n + 1 : n))))
+      setVotes((v) => v.map((n, i) => (i === choice ? n + 1 : n)))
       window.setTimeout(() => setTapped(null), 650)
       window.setTimeout(() => setPops((p) => p.filter((x) => x.id !== popId)), 1300)
     }, 1100)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [scene])
 
   const total = votes.reduce((a, b) => a + b, 0)
+
+  // Une fois la série de votes terminée, on passe à une autre question.
+  useEffect(() => {
+    if (total < MAX_VOTES) return
+    const t = window.setTimeout(() => {
+      const next = (sceneIndex + 1 + Math.floor(Math.random() * (SCENES.length - 1))) % SCENES.length
+      setVotes(seed(SCENES[next].weights))
+      setSceneIndex(next)
+    }, 1500)
+    return () => window.clearTimeout(t)
+  }, [total, sceneIndex])
 
   return (
     <div className="scene" aria-hidden="true">
       <div className="scene-screen">
         <div className="scene-screen__top">
-          <span className="scene-chip">Question 2 / 5</span>
+          <span className="scene-chip">Question {sceneIndex + 1} / {SCENES.length}</span>
           <span className="scene-live">
             <i /> En direct
           </span>
         </div>
-        <p className="scene-question">Quel gaz les plantes rejettent-elles pendant la photosynthèse ?</p>
+        <p className="scene-question">{scene.question}</p>
         <ul className="scene-bars">
-          {DEMO_CHOICES.map((label, i) => {
+          {scene.choices.map((label, i) => {
             const pct = total ? Math.round((100 * votes[i]) / total) : 0
             return (
               <li key={label}>
@@ -123,7 +117,7 @@ function LiveScene() {
       <div className="scene-phone">
         <div className="scene-phone__notch" />
         <span className="scene-phone__title">Votre réponse</span>
-        {DEMO_CHOICES.map((label, i) => (
+        {scene.choices.map((label, i) => (
           <span key={label} className={`scene-answer ${tapped === i ? 'is-tapped' : ''}`} style={{ background: `var(--c${i})` }}>
             {LETTERS[i]} · {label}
           </span>
@@ -142,67 +136,127 @@ function LiveScene() {
   )
 }
 
-/* ---------- Démo IA : texte → questions ---------- */
+/* ---------- Illustrations (dessins simples, aux couleurs du thème) ---------- */
 
-function AiDemo() {
+function QuizArt() {
   return (
-    <div className="ai-demo" aria-hidden="true">
-      <div className="ai-demo__doc">
-        <span className="ai-demo__tag">Votre cours</span>
-        <p>
-          La photosynthèse permet aux plantes de fabriquer leur matière à partir de la lumière. Elles absorbent le dioxyde de carbone et rejettent de
-          l’oxygène…
-        </p>
-        <span className="ai-demo__scan" />
+    <svg viewBox="0 0 220 150" className="landing-art" aria-hidden="true">
+      <ellipse cx="110" cy="80" rx="100" ry="64" fill="#e7f0db" />
+      <rect x="58" y="22" width="112" height="104" rx="10" fill="#fff" stroke="#1b2a4a" strokeWidth="3" />
+      <rect x="72" y="36" width="62" height="7" rx="3.5" fill="#2f5d9e" />
+      {[0, 1, 2].map((i) => (
+        <g key={i} transform={`translate(72 ${56 + i * 22})`}>
+          <rect width="14" height="14" rx="3" fill={i === 0 ? '#b5d38a' : '#fff'} stroke="#1b2a4a" strokeWidth="2.5" />
+          {i === 0 && <path d="M3 7l3 3 5-6" fill="none" stroke="#1b2a4a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+          <rect x="22" y="3" width={i === 0 ? 58 : 48 - i * 6} height="8" rx="4" fill={i === 0 ? '#5e7f2e' : '#c9d6e8'} />
+        </g>
+      ))}
+      <circle cx="170" cy="118" r="20" fill="#b5d38a" stroke="#1b2a4a" strokeWidth="3" />
+      <path d="M161 118l6 6 12-13" fill="none" stroke="#1b2a4a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function PollArt() {
+  return (
+    <svg viewBox="0 0 220 150" className="landing-art" aria-hidden="true">
+      <ellipse cx="110" cy="80" rx="100" ry="64" fill="#e7f0db" />
+      <rect x="36" y="30" width="118" height="70" rx="12" fill="#fff" stroke="#1b2a4a" strokeWidth="3" />
+      <path d="M58 100l-6 16 22-16" fill="#fff" stroke="#1b2a4a" strokeWidth="3" strokeLinejoin="round" />
+      <rect x="52" y="46" width="78" height="9" rx="4.5" fill="#1b2a4a" />
+      <rect x="52" y="62" width="56" height="9" rx="4.5" fill="#5e7f2e" />
+      <rect x="52" y="78" width="34" height="9" rx="4.5" fill="#2f5d9e" />
+      <rect x="150" y="70" width="44" height="64" rx="9" fill="#1b2a4a" />
+      <rect x="156" y="80" width="32" height="10" rx="3" fill="#b5d38a" />
+      <rect x="156" y="95" width="32" height="10" rx="3" fill="#c9d6e8" />
+      <rect x="156" y="110" width="32" height="10" rx="3" fill="#c9d6e8" />
+    </svg>
+  )
+}
+
+/* ---------- Maquettes des trois étapes ---------- */
+
+function MockEditor() {
+  return (
+    <div className="mock mock--editor" aria-hidden="true">
+      <div className="mock__bar"><b>QuizFlow</b><span>Chapitre 3 : les piles</span><i className="mock__btn">Lancer la session</i></div>
+      <div className="mock__body">
+        <div className="mock__side">
+          <i className="mock__btn mock__btn--light">+ Ajouter une question</i>
+          {['Quel principe suit une pile ?', 'Que renvoie depiler() ?', 'Une file est…'].map((t, i) => (
+            <span key={t} className={i === 0 ? 'is-on' : ''}>{i + 1}. {t}</span>
+          ))}
+        </div>
+        <div className="mock__main">
+          <small>Question 1 · Choix unique</small>
+          <strong>Quel principe suit une pile ?</strong>
+          {['Dernier entré, premier sorti', 'Premier entré, premier sorti', 'Aléatoire'].map((t, i) => (
+            <span key={t} className={`mock__choice ${i === 0 ? 'is-good' : ''}`}><em>{LETTERS[i]}</em>{t}{i === 0 && <b>✓</b>}</span>
+          ))}
+        </div>
       </div>
-      <div className="ai-demo__arrow">→</div>
-      <div className="ai-demo__questions">
-        {['Que rejettent les plantes ?', 'Quelle énergie utilise la photosynthèse ?', 'Quel gaz est absorbé ?'].map((q, i) => (
-          <div key={q} className="ai-demo__q" style={{ animationDelay: `${0.9 + i * 0.45}s` }}>
-            <span className="ai-demo__num">{i + 1}</span>
-            {q}
-            <span className="ai-demo__ok">Ajouter</span>
-          </div>
+    </div>
+  )
+}
+
+function MockLobby() {
+  return (
+    <div className="mock mock--lobby" aria-hidden="true">
+      <div className="mock__qr">
+        <svg viewBox="0 0 21 21" shapeRendering="crispEdges">
+          <path fill="currentColor" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h2v2H8zM11 1h2v3h-2zM8 3h2v2H8zM9 6h3v2H9zM8 9h2v3H8zM11 9h3v2h-3zM15 8h2v3h-2zM18 9h3v2h-3zM0 8h3v2H0zM4 9h3v2H4zM12 12h2v2h-2zM15 12h3v3h-3zM19 13h2v2h-2zM8 13h3v2H8zM9 16h3v2H9zM13 15h2v3h-2zM8 19h4v2H8zM16 17h2v4h-2zM19 17h2v2h-2zM13 19h2v2h-2z" />
+        </svg>
+      </div>
+      <div className="mock__lobby-text">
+        <small>Scannez le QR code ou entrez le code</small>
+        <strong>K4P2ZQ</strong>
+        <span>24 participants</span>
+        <div className="mock__chips">{['Salma', 'Amine', 'Hiba', 'Omar', 'Nour', 'Yassine'].map((n) => <i key={n}>{n}</i>)}</div>
+      </div>
+    </div>
+  )
+}
+
+function MockResults() {
+  return (
+    <div className="mock mock--results" aria-hidden="true">
+      <div className="mock__kpis">
+        <span><b>24</b>participants</span>
+        <span><b>78 %</b>de réussite</span>
+      </div>
+      <div className="mock__podium">
+        {[['Salma', 9, 1], ['Amine', 8, 2], ['Hiba', 8, 2]].map(([n, s, r]) => (
+          <span key={n as string}><em>{r}</em>{n}<b>{s} pts</b></span>
+        ))}
+      </div>
+      <div className="mock__bars">
+        {[71, 14, 11, 4].map((v, i) => (
+          <span key={i}><em style={{ background: `var(--c${i})` }}>{LETTERS[i]}</em><i style={{ width: `${v}%`, background: `var(--c${i})` }} /><b>{v} %</b></span>
         ))}
       </div>
     </div>
   )
 }
 
-/* ---------- Icônes ---------- */
-
-const icons = {
-  create: <path d="M5 19h14M7 15l8.5-8.5a2 2 0 0 1 3 3L10 18H7z" />,
-  qr: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2M14 18h2M18 18h2v2h-2" />,
-  live: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
-  ai: <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />,
-  phone: <path d="M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2" />,
-  podium: <path d="M3 20h18M5 20v-6h4v6M10 20V9h4v11M15 20v-8h4v8M12 3l1 2 2 .3-1.5 1.4.4 2.1L12 7.8l-1.9 1 .4-2.1L9 5.3l2-.3z" />,
-  history: <path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2" />,
-  poll: <path d="M4 6h16M4 12h10M4 18h6" />,
-}
-
-function Icon({ name }: { name: keyof typeof icons }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {icons[name]}
-    </svg>
-  )
-}
-
-const STEPS: { icon: keyof typeof icons; title: string; text: string }[] = [
-  { icon: 'create', title: 'Préparez', text: 'Écrivez vos questions ou laissez l’IA les proposer à partir de votre cours.' },
-  { icon: 'qr', title: 'Projetez', text: 'Lancez la session : un QR code et un code à 6 caractères s’affichent au tableau.' },
-  { icon: 'live', title: 'Animez', text: 'Les élèves répondent sur leur téléphone, les pourcentages bougent en direct.' },
-]
-
-const FEATURES: { icon: keyof typeof icons; title: string; text: string }[] = [
-  { icon: 'ai', title: 'Questions générées par l’IA', text: 'Collez un extrait de cours, l’IA propose des questions. Vous gardez celles qui vous conviennent.' },
-  { icon: 'phone', title: 'Sans compte pour les élèves', text: 'Un scan ou un code, un pseudo, et c’est parti. Rien à installer.' },
-  { icon: 'poll', title: 'Quiz et sondages', text: 'Testez les connaissances ou recueillez l’avis de la classe, en choix unique ou multiple.' },
-  { icon: 'podium', title: 'Classement et podium', text: 'Les points récompensent les bonnes réponses : de quoi motiver toute la classe.' },
-  { icon: 'live', title: 'Résultats détaillés', text: 'Après la séance, retrouvez les réponses par question pour voir ce qui reste à revoir.' },
-  { icon: 'history', title: 'Historique des séances', text: 'Toutes vos sessions passées restent accessibles depuis votre espace.' },
+const STEPS: { title: string; text: string; icon: ReactNode; mock: ReactNode }[] = [
+  {
+    title: 'Préparer',
+    text: 'Écrivez vos questions ou générez-les à partir de votre cours avec l’IA.',
+    icon: <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />,
+    mock: <MockEditor />,
+  },
+  {
+    title: 'Inviter la classe',
+    text: 'Projetez le QR code : les élèves rejoignent depuis leur téléphone, sans compte.',
+    icon: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2M14 18h2M18 18h2v2" />,
+    mock: <MockLobby />,
+  },
+  {
+    title: 'Voir les résultats',
+    text: 'Pourcentages en direct, classement en fin de séance, historique et export.',
+    icon: <path d="M4 18l5-6 4 3 7-9M15 6h5v5" />,
+    mock: <MockResults />,
+  },
 ]
 
 export default function LandingPage() {
@@ -210,6 +264,8 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
   const [scrolled, setScrolled] = useState(false)
+  const [replay, setReplay] = useState(0)
+  const [step, setStep] = useState(0)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -223,6 +279,8 @@ export default function LandingPage() {
     if (code.length === 6) navigate(`/join/${code}`)
   }
 
+  const startLink = teacher ? '/dashboard' : '/register'
+
   return (
     <div className="landing">
       <header className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`}>
@@ -231,21 +289,19 @@ export default function LandingPage() {
             <Logo size={32} /> QuizFlow
           </Link>
           <nav className="landing-nav__links" aria-label="Sections">
-            <a href="#comment">Comment ça marche</a>
-            <a href="#fonctionnalites">Fonctionnalités</a>
-            <a href="#ia">L’IA</a>
+            <a href="#facons">Quiz et sondages</a>
+            <a href="#etapes">Comment ça marche</a>
+            <a href="#ia">Assistant IA</a>
           </nav>
           <div className="landing-nav__actions">
-            <Link to="/join" className="btn btn-ghost landing-hide-sm">
-              Rejoindre
-            </Link>
+            <ThemeToggle />
             {teacher ? (
               <Link to="/dashboard" className="btn btn-primary">
                 Mon espace
               </Link>
             ) : (
               <>
-                <Link to="/login" className="btn btn-outline">
+                <Link to="/login" className="btn btn-ghost">
                   Se connecter
                 </Link>
                 <Link to="/register" className="btn btn-primary landing-hide-sm">
@@ -259,131 +315,115 @@ export default function LandingPage() {
 
       <main>
         <section className="landing-hero">
-          <div className="landing-hero__bg" aria-hidden="true">
-            <Suspense fallback={null}>
-              <Hero3D />
-            </Suspense>
-            <span className="landing-hero__shade" />
-            <span className="landing-hero__glow" />
-            <span className="landing-hero__grid-lines" />
+          <div className="landing-wrap landing-hero__inner">
+            <form className="landing-join" onSubmit={join}>
+              <label htmlFor="landing-code">Rejoindre une session</label>
+              <input
+                id="landing-code"
+                className="input"
+                placeholder="Code à 6 caractères"
+                autoComplete="off"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              />
+              <button className="btn btn-accent" disabled={code.length !== 6}>
+                Rejoindre
+              </button>
+              <Link to="/join" className="landing-join__scan">
+                Scanner un QR code
+              </Link>
+            </form>
+
+            <h1>
+              Faites participer <span>toute la classe.</span>
+            </h1>
+            <p className="landing-lead">Quiz et sondages en direct : les élèves répondent sur leur téléphone, les résultats s’affichent aussitôt.</p>
+            <Link to={startLink} className="btn btn-primary btn-lg">
+              {teacher ? 'Aller à mon espace →' : 'Créer mon premier quiz →'}
+            </Link>
           </div>
-          <div className="landing-wrap landing-hero__grid">
-            <div className="landing-hero__text">
-              <span className="landing-chip">Quiz et sondages en direct pour la classe</span>
-              <h1>
-                Toute la classe participe, <span>en direct</span>.
-              </h1>
-              <p className="landing-lead">
-                Projetez une question, vos élèves répondent depuis leur téléphone et les résultats s’affichent en temps réel. Préparer un quiz ne prend que
-                quelques minutes, grâce à l’IA.
-              </p>
-              <div className="landing-hero__cta">
-                <Link to={teacher ? '/dashboard' : '/register'} className="btn btn-accent btn-lg">
-                  {teacher ? 'Aller à mon espace →' : 'Créer mon premier quiz →'}
-                </Link>
-                <a href="#comment" className="btn landing-btn-ghost btn-lg">
-                  Voir comment ça marche
-                </a>
-              </div>
-              <form className="landing-join" onSubmit={join}>
-                <label htmlFor="landing-code">Vous êtes élève ?</label>
-                <div className="landing-join__row">
-                  <input
-                    id="landing-code"
-                    className="input"
-                    placeholder="CODE"
-                    autoComplete="off"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  />
-                  <button className="btn btn-accent" disabled={code.length !== 6}>
-                    Rejoindre
-                  </button>
-                </div>
-                <Link to="/join" className="landing-join__scan">
-                  ou scannez le QR code →
-                </Link>
-              </form>
+
+          <div className="landing-wrap landing-demo">
+            <div className="landing-demo__frame">
+              <LiveScene key={replay} />
             </div>
-            <LiveScene />
+            <div className="landing-demo__caption">
+              <span>Quiz et sondage en direct</span>
+              <button type="button" className="landing-link-btn" onClick={() => setReplay((r) => r + 1)}>
+                Rejouer
+              </button>
+            </div>
           </div>
         </section>
 
-        <section id="comment" className="landing-section">
+        <section id="facons" className="landing-section landing-section--tint">
           <div className="landing-wrap">
-            <Reveal className="landing-head">
-              <span className="landing-eyebrow">Comment ça marche</span>
-              <h2>Trois étapes, zéro installation</h2>
-            </Reveal>
+            <h2>Deux façons de faire participer</h2>
+            <div className="landing-ways">
+              <Link to={teacher ? '/activities/new?type=QUIZ' : '/register'} className="landing-way">
+                <div>
+                  <h3>Quiz</h3>
+                  <p>Vérifiez les acquis : bonnes réponses, points et classement.</p>
+                </div>
+                <QuizArt />
+              </Link>
+              <Link to={teacher ? '/activities/new?type=SONDAGE' : '/register'} className="landing-way landing-way--poll">
+                <div>
+                  <h3>Sondages</h3>
+                  <p>Recueillez l’avis de la classe : nuage de mots, notes, classement, questions du public.</p>
+                </div>
+                <PollArt />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section id="etapes" className="landing-section">
+          <div className="landing-wrap">
+            <h2 className="landing-h2-left">De la première question aux résultats</h2>
             <div className="landing-steps">
-              {STEPS.map((s, i) => (
-                <Reveal key={s.title} delay={i * 120} className="landing-step">
-                  <span className="landing-step__num">{i + 1}</span>
-                  <span className="landing-icon">
-                    <Icon name={s.icon} />
+              <div className="landing-steps__visual">
+                {STEPS[step].mock}
+                <div className="landing-steps__pager">
+                  <button type="button" className="btn btn-outline" onClick={() => setStep((s) => (s + STEPS.length - 1) % STEPS.length)}>
+                    Précédent
+                  </button>
+                  <span>
+                    {step + 1} / {STEPS.length}
                   </span>
-                  <h3>{s.title}</h3>
-                  <p>{s.text}</p>
-                </Reveal>
-              ))}
+                  <button type="button" className="btn btn-outline" onClick={() => setStep((s) => (s + 1) % STEPS.length)}>
+                    Suivant
+                  </button>
+                </div>
+              </div>
+              <div className="landing-accordion">
+                {STEPS.map((s, i) => (
+                  <div key={s.title} className={`landing-accordion__item ${i === step ? 'is-open' : ''}`}>
+                    <button type="button" aria-expanded={i === step} onClick={() => setStep(i)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        {s.icon}
+                      </svg>
+                      <span>{s.title}</span>
+                      <i aria-hidden="true">⌄</i>
+                    </button>
+                    {i === step && <p>{s.text}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         <section id="ia" className="landing-section landing-ai">
-          <div className="landing-wrap landing-ai__grid">
-            <Reveal className="landing-ai__text">
-              <span className="landing-eyebrow landing-eyebrow--light">Assistant de questions</span>
-              <h2>
-                Votre cours devient un quiz en <span>30 secondes</span>.
-              </h2>
-              <p>
-                Collez un passage de votre cours : l’IA propose des questions et leurs réponses, en s’appuyant uniquement sur votre contenu. Vous relisez,
-                vous gardez, vous lancez.
-              </p>
-              <p className="landing-ai__soon">Bientôt : importez directement vos PDF.</p>
-            </Reveal>
-            <Reveal delay={150}>
-              <AiDemo />
-            </Reveal>
-          </div>
-        </section>
-
-        <section id="fonctionnalites" className="landing-section">
-          <div className="landing-wrap">
-            <Reveal className="landing-head">
-              <span className="landing-eyebrow">Fonctionnalités</span>
-              <h2>Tout ce qu’il faut pour une classe qui participe</h2>
-            </Reveal>
-            <div className="landing-features">
-              {FEATURES.map((f, i) => (
-                <Reveal key={f.title} delay={(i % 3) * 100} className="landing-feature">
-                  <span className="landing-icon">
-                    <Icon name={f.icon} />
-                  </span>
-                  <h3>{f.title}</h3>
-                  <p>{f.text}</p>
-                </Reveal>
-              ))}
+          <div className="landing-wrap landing-ai__inner">
+            <div>
+              <h2>Votre cours devient un quiz</h2>
+              <p>Collez un texte ou importez un PDF : l’IA propose des questions avec la page source. Vous gardez celles qui vous conviennent.</p>
             </div>
-          </div>
-        </section>
-
-        <section className="landing-section">
-          <div className="landing-wrap">
-            <Reveal className="landing-final">
-              <h2>Prêt pour votre prochain cours ?</h2>
-              <p>Créez votre compte, préparez un quiz et projetez-le dès aujourd’hui.</p>
-              <div className="landing-hero__cta">
-                <Link to={teacher ? '/dashboard' : '/register'} className="btn btn-accent btn-lg">
-                  {teacher ? 'Aller à mon espace →' : 'Créer un compte enseignant →'}
-                </Link>
-                <Link to="/join" className="btn landing-btn-ghost btn-lg">
-                  Rejoindre une session
-                </Link>
-              </div>
-            </Reveal>
+            <Link to={startLink} className="btn btn-accent btn-lg">
+              Essayer l’assistant →
+            </Link>
           </div>
         </section>
       </main>
@@ -393,7 +433,7 @@ export default function LandingPage() {
           <span className="brand landing-brand">
             <Logo size={26} /> QuizFlow
           </span>
-          <span>Projet d’initiation · ENSAM Meknès · Youssra Haddouch &amp; Ikram Ech-Charqy</span>
+          <span>ENSAM Meknès · Youssra Haddouch &amp; Ikram Ech-Charqy</span>
         </div>
       </footer>
     </div>
